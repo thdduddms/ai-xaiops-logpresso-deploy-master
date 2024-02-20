@@ -36,7 +36,7 @@
   ]
 
 | join type=left _host, pid [
-    dbquery intermax_221 select time, host_name as _host, cast(pid as varchar), user_name, args as command_detail 
+    dbquery intermax_intermax select time, host_name as _host, cast(pid as varchar), user_name, args as command_detail 
                             from xapm_os_process_list a inner join xapm_host_info b on a.host_ip=b.host_ip 
                             where time >= to_timestamp(:from, 'YYYYMMDDHH24MI') 
                             			and time <= to_timestamp(:to, 'YYYYMMDDHH24MI') and b.host_name = :target_id

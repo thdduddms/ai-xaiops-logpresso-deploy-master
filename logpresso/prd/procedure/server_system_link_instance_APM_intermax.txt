@@ -5,26 +5,7 @@
 
 
 | # 'JAVA' : was  'WSM' : web,  'TP', 'TUX : TP
-| dbquery intermax_221 
-		select t1.*, COALESCE((select true from xapm_service_group xsg where t1.target_id = xsg.server_id), false) as enable
-		from (
-        	select modified_time, server_id as target_id, a.type, COALESCE(b.host_name, a.host_name) as host_name, inst_name
-  					from xapm_agent_info as a
-					inner join ( select was_id as target_id, 'WSM' as type, host_name, was_name as inst_name  from xapm_was_info
-  					union all select ws_id as target_id, 'WSM' as type, host_name, ws_name as inst_name from xapm_ws_info) 
-					b on a.server_id=b.target_id
-			where a.type in ('JAVA', 'WSM', 'server_id', 'TUX')
-		) t1 where inst_name is not null
-| eval target_id = str(target_id)
-
-| join type=left target_id [ 
-	dbquery intermax_221 
-    		select group_type, group_name as inst_group_name, group_id as target_id from xapm_business_group_info 
-	| fields group_type, inst_group_name, target_id
- ]
-	
-| union [
-	dbquery intermax_v5_3
+| dbquery intermax_intermax
 			select t1.*, COALESCE((select true from xapm_service_group xsg where t1.target_id = xsg.server_id), false) as enable
 		from (
         	select modified_time, server_id as target_id, a.type, COALESCE(b.host_name, a.host_name) as host_name, inst_name
@@ -36,7 +17,7 @@
 		) t1 where inst_name is not null
 | eval target_id = str(target_id)
 	| join type=left target_id [ 
-		dbquery intermax_v5_3 
+		dbquery intermax_intermax 
 			select
 				group_type,
 				group_name as inst_group_name,
@@ -46,7 +27,7 @@
 			where type = 'GROUP'
 		| fields group_type, inst_group_name, target_id
      ]
- ]
+
  | sort limit=1 -modified_time by repo_ip, type, target_id, inst_group_name
 
 | # { 본사용 임시 대상 

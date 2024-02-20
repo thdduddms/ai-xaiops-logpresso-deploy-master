@@ -5,33 +5,26 @@
 | # 10.30
 | # set from=nvl($("from"), datetrunc(now(), "1d")) | # set from=datetrunc(now(), "1d")
 | # set to = dateadd( date($("from"), "yyyyMMdd"), "day", 1)
-| table from=$("from") to=$("to") exem_aiops_anls_inst_code
-| search system_id==$("system_id") and isnotnull(txn_name)
-| stats count, first(txn_id) as txn_id, first(txn_name) as txn_name by _target, tx_code_name, tx_code
-| union [ 
-	dbquery intermax_221
-	select txn_id, txn_name from xapm_txn_name limit 30 
-	| eval tx_code=seq() | search tx_code > 10 
-	| eval tx_code=str(tx_code), tx_code_name = concat("TEST_", tx_code), count =1, _target=tx_code ,  
-    _target= if(contains(tx_code, "/"), tohex( hash("md5", binary(tx_code))), string(tx_code))
-    ] 
-| eval count = long(count)
-| rename _target as target_id
-|# 2023-07-25 박재윤 더미데이터 (aitr3 요청)
-| union [
-	json "{}" 
-    | eval target_id = "999", tx_code_name = "카드", tx_code = "31" , count = 1,
-    		txn_id = "CEA56AB32FA0656E6A64750BD53919238C7A627Z", txn_name = "/EXEMBank1.2/card" 
-            ]
-| eval inst_type="code"
-| search inst_type == nvl($("inst_type"), inst_type) 
+| table from=$("from") to=$("to") xapm_txn_detail
+| search first==1 and isnotnull(tx_code)
+| stats count, first(txn_id) as txn_id by tx_code
 
-| fields - system_id, inst_type, tx_code, count
-| sort target_id
+| join type=left tx_code [
+	dbquery intermax_intermax
+	select tx_code, tx_code_name from xapm_tx_code_info
+]
+| eval tx_code_name = nvl(tx_code_name, tx_code)
 
-| # 개발계 테스트용 추가 (2023.10.19 김민지)
-| union [ json "{}" | eval tx_code_name="등록테스트", txn_id = "mjkim_txn_id", txn_name="mjkim_txn", target_id="test_mjkim" ]
-| union [ json "{}" | eval tx_code_name="로그인_더미", txn_id = "loglogin", txn_name="login_txn_name", target_id="login_dummy" ]
+| join type=left txn_id [
+	dbquery intermax_intermax
+	select txn_id, txn_name from xapm_txn_name
+]
+| eval txn_name = nvl(txn_name, txn_id)
+
+
+| rename tx_code as target_id
+| fields target_id, tx_code_name, txn_id, txn_name
+
 
 | # [result_fields[
 target_id || string || not null
