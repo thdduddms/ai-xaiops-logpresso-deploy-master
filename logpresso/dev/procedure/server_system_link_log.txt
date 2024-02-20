@@ -6,8 +6,7 @@
 | proc server_system_link_log_sentry()
 | # eval is_sentry=if(guid=="local", "local", "sentry")
 | eval is_sentry=if(guid=="local", false, true), name=target_id
-| search system_id == $("system_id", 102) 
-
+| search system_id == $("system_id", 102)
 | join type=left target_id [ lookuptable lu_log_info ]
 | eval 
 	log_name = nvl(log_name, target_id),
