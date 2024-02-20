@@ -1,0 +1,63 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+dbquery maxgauge_222 
+select 
+	server_type, 
+    server_id, 
+    server_time, 
+    logging_time, 
+    status, 
+    host_ip, 
+    CAST(CAST((concat('X', host_ip)) AS bit(32)) AS int) as host_ip_int 
+    from public.ora_server_time
+| union [ 
+	dbquery maxgauge_207_T 
+    	select 
+        	server_type, 
+            server_id, 
+            server_time,
+            logging_time,
+            status,
+            host_ip,
+            CAST(CAST((concat('X', host_ip)) AS bit(32)) AS int) as host_ip_int 
+            from public.ora_server_time 
+	| eval server_id = concat(server_id, "_T") 
+    | search server_id == "2_T" |# 임시  
+    ]
+|# server_type : 0-DGServer / 1-?? / 2-DB / 3-?? / 15-??
+| # status : 0-정상, 1-맥스게이지<->수집데몬, 2-수집데몬<->DB인스턴스
+| eval 
+	inst_type= case (server_type==1, "was",
+						server_type==2, "db", 
+                        server_type==3, "web"),
+                        		host_ip_hex = host_ip,
+        host_ip = if( isnotnull(host_ip_hex), str(ip(host_ip_int)), null),
+		status = case (status==0 , "CONNECTED",
+                   						status==1 , "DISCONNECTED",
+                   						status==2 , "DOWN")
+| fields server_type, server_id, server_time, logging_time, status, host_ip, inst_type
+| # import ora_server_time
+
+|# PG에 인서트할때 필요한 부분. 기존 쿼리는 유지하고 PG 포맷에 맞게 변경한다.
+| search isnotnull(status)
+| eval 
+	sys_id = 2, 
+    server_id =str(server_id), 
+    time = datetrunc(now(), "1m")
+| rename 
+	inst_type as target_type,
+    server_id as target_id
+| fields sys_id, time, target_type, target_id, status
+| join sys_id, target_id,target_type [ 
+dbquery ai_server 
+	select 
+    	inst_type as target_type, 
+        target_id, 
+        sys_id 
+        from xaiops_instance 
+        where inst_type = 'db' and enable
+        ]
+| dboutput ai_server rowretry=f stoponfail=t table=lp_health_check_history
+sys_id, time, target_type, target_id, status
+| # status string, sys_id int, target_id string, target_type string, time date

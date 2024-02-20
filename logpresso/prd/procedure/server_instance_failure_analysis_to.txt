@@ -1,0 +1,14 @@
+파라미터 : [int system_id, string target_id, string from]
+설명 : 모니터링 > 인스턴스 장애분석
+
+# 인스턴스 장애분석 내 현재 인스턴스가 호출한 인스턴스 리턴 - 화면 오른쪽, 더미데이터 **
+| json "{}"
+| eval target_id = array("214", "tp01", "web007", "web17", "web001")
+| explode target_id 
+| eval count = rand(15), count = if(count == 0, 1, count)
+| fields target_id, count
+
+| # [result_fields[
+count || long || not null
+target_id || string || not null
+| # ]result_fields]

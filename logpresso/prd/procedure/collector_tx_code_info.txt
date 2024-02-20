@@ -1,0 +1,7 @@
+파라미터 : [int system_id, string from, string to]
+설명 : tx_code_info 변경
+
+table from=$("from") to=$("to") parallel=t exem_aiops_anls_inst_code
+| fields system_id, tx_code, tx_code_name, node_count,  txn_name, txn_id
+| search system_id == $("system_id")
+| stats sum(node_count) as exec_count by system_id, tx_code, tx_code_name, txn_name, txn_id

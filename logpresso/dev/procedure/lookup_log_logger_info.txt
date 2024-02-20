@@ -1,0 +1,56 @@
+파라미터 : []
+설명 : 미사용 (필수) 로그이상탐지 Naming에 맞는 대상 정보조회 (수집 설정 변경 후 rebuild)
+
+bypass
+
+| # [ confdb docs logpresso loggers
+| rex field=host "^\d+\[.+\](?<category>\S+)\."
+| search in(category, "os", "was", "db", "web", "middelware", "etc")
+
+| rename host as _host, doc_id as _target, type as namespace_type, table_name as log_category
+| fields _target, _host, namespace_type, log_category, full_name 
+| eval log_category = replace(log_category,"log_",""),
+		_target = concat("log_", log_category, "-", str(_target)), 
+        system_id = int(substr(_host, 0, indexof(_host, "["))), 
+        log_file_name = substr(_host, indexof(_host, ".")+1)
+| join type=left _host [ 
+	confdb docs araqne-log-api logger 
+    | union [ sentry | fields guid | sentry-loggers | sentry-logger-configs ]
+    | search factory_name == "*rotation" 
+    			or factory_name == "*dirwatch" 
+                or factory_name == "*wtmp" 
+                or factory_name == "windows-event-logger"
+    | eval file_dir = case( in(factory_name,"rotation", "sftp-rotation"), valueof(configs, "file_path"),
+                                factory_name=="windows-event-logger", valueof(configs, "event_source"),
+                                factory_name=="wtmp", valueof(configs, "path"),
+                                concat(valueof(configs, "base_path"), "/", valueof(configs, "filename_pattern"))),
+            date_pattern = valueof(configs, "date_pattern"), 
+            date_format = valueof(configs, "date_format")
+    | fields guid, name, file_dir, date_pattern, date_format, factory_name, description
+    | rename name as _host ]
+ 
+ |# 비정상 로거 조회 대상에서 제외 
+| join type=leftonly full_name [ 
+	confdb docs araqne-log-api logger
+	| union [ sentry | fields guid | sentry-loggers | sentry-logger-configs | search isnotnull(name) ]
+	| eval namespace = if( isnull(namespace), guid, namespace), 
+    		full_name = format( "%s\\%s", namespace, name), 
+            identifier = "logapi"  
+| fields full_name, identifier, guid
+| join type=full full_name [ 
+	confdb docs logpresso loggers 
+    | eval identifier2 = "logpresso" 
+    | fields full_name, identifier2 ] 
+| search isnull(identifier) or isnull(identifier2) ] 
+ 
+ | # 1004 영은 시스로그 등록 테스트 수정
+| rex field=_host "\[(?<local_guid>\S+)\]"
+| eval guid=case(namespace_type=="local" and log_file_name=="syslog", local_guid, guid)
+| search if(indexof(full_name, guid)==0 or indexof(full_name, guid)==10, true, false) 
+			or (isnull(guid) and factory_name == "sftp-*")
+ 
+| # search if(indexof(full_name, guid)==0, true, false) 
+			or (isnull(guid) and factory_name == "sftp-*")
+| eval target_guid = if(namespace_type=="local", substr(_host, indexof(_host, "[")+1, indexof(_host, "]")), guid)
+| fields _host, system_id, _target, log_category, namespace_type, target_guid, file_dir, date_pattern, date_format, log_file_name, factory_name, description
+| memlookup op=build name=lookup_log_logger_info key=_host system_id, _target, log_category, namespace_type, target_guid, file_dir, date_pattern, date_format, log_file_name, factory_name, description

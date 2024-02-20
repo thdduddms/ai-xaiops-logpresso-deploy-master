@@ -1,0 +1,20 @@
+파라미터 : [int system_id, string tx_code, string from]
+설명 : 모니터링 > 서비스 / 모니터링, 장애분석
+
+# 서비스 모니터링 내 서비스 통과구간 위젯 데이터 , 서비스 장애분석 인스턴스 데이터 리턴 **
+| set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") xapm_txn_detail 
+| eval tid = str(tid)
+| join tid [ 
+	proc get_tid_list_from_xapm_etoe_data_set($("system_id"), $("tx_code"), $("from"))
+        | eval tid_list=if(isnull(tid_list), top_tid, tid_list), split = split(tid_list, ",")
+    | explode split
+    | rename split as tid
+    | fields tid ]
+| stats count by was_id
+| rename was_id as target_id
+| fields target_id, count
+| # [result_fields[
+target_id || string || null
+count || int || not null
+| # ]result_fields]

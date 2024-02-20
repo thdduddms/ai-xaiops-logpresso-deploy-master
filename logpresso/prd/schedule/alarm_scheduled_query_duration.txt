@@ -1,0 +1,9 @@
+실행 주기 : * * * * *
+경보 사용 : stats count
+| search count > 0
+
+set from=datetrunc(dateadd(now(), "min", -1), "1m")
+| set to=datetrunc(dateadd(now(), "min", 0), "1m")
+| table from=$("from") to=$("to") araqne_query_logs
+| search source == "scheduled-query" and duration > 10
+| fields login_name, cancelled, query_id, source, state, duration, start_at,  eof_at, query_string

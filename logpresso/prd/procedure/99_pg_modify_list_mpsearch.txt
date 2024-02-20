@@ -1,0 +1,19 @@
+파라미터 : [string day]
+설명 : PG에서 변경되는 사항에 대해 변경대상을 mpsearch로 조회하기, lu_pg_modify_history 룩업에서 적용 내용을 관리하기
+
+proc 99_scheduled_queries_list()
+| eval _object = "scheduled_query"
+| union [
+		proc 99_procedure_list()
+		| eval _object = "procedure"]
+| mpsearch query_string [
+	set day = date($("day", now()), "yyyy-MM-dd")
+	| lookuptable lu_pg_modify_history
+	| eval modify_dt = date(modify_dt, "yyyy-MM-dd")
+	| search modify_dt >=  $("day")
+    | sort no
+	| eval expr = concat("\"", asis_name, "\""), rule = tobe_name
+	| fields expr, rule
+]
+| search len(_mp_result) > 0
+| order _object, name, _mp_result, query_string

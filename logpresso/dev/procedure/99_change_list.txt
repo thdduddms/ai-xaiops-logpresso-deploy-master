@@ -1,0 +1,46 @@
+파라미터 : [string from]
+설명 : 변경된 대상 조회 (현재ver.프로시저, 예약쿼리만, 스트림쿼리, 대시보드, 룩업)
+
+set from = $("from", str(ago("90d"), "yyyyMMddHHmm"))
+| set to = now()
+| table from=$("from") to=$("to") sys_audit_logs
+| search user == "root" and isnull(error) 
+	and (contains(lower(method), "procedure") 
+    or contains(lower(method), "scheduled") 
+    or contains(lower(method), "wall") 
+    or contains(lower(method), "streamquery"))
+| eval name = nvl( valueof(params, "title"), nvl( strjoin(", ", valueof(params, "titles")), nvl( valueof(params, "name"), strjoin(", ", valueof(params, "names")) ) ) )
+| fields - params, req, resp
+| eval method = replace(method, "com.logpresso.core.msgbus.", ""), 
+	method = replace(method, "com.logpresso.query.msgbus.", ""),
+    type = substr(method, 0, indexof(method, ".")), 
+    action = substr(method, indexof(method, ".")+1), 
+    _time = str(_time, "yyyy-MM-dd HH:mm:ss")
+| sort _time
+| stats count, array(_time) as time, first(type) as type, array(action) as action, array(remote_ip) as remote_ip, array(user) as user by type, name
+| eval history = strjoin("\n", foreach( concat(_1, " / ", _2, "(", _3, ") : ", _4), time, user, remote_ip, action )), 
+		name = replace(name, ", ", "\n")
+| sort type, name
+| fields type, name, count, history
+| eval widget_guid = if( type == "WallPlugin", name, null)
+| join type=left widget_guid [ 
+    confdb docs logpresso wall
+| join parent [
+	confdb docs logpresso wall
+    | search isnull(parent)
+    | fields guid, name | rename guid as parent, name as parent_name
+    ]
+| parsemap overlay=t field=state
+| fields - state
+| explode widgets
+| rename guid as widget_guid
+| parsemap overlay=t field=widgets | fields - widgets
+| eval name = concat("[", parent_name, "]\n(",type,") ", name)
+| fields name, widget_guid
+]
+| fields - widget_guid
+| # union [ sftp ssh_ai_lp ls /data/logpresso/data/logpresso-core/lookup 
+| fields name, modified_at | rename modified_at as history 
+| search history > date($("from"), "yyyyMMddHHmm") | search name!=".."
+| eval name=replace(name, ".json", "") 
+| eval count=1, type="Lookup"| eval history=str(history, "yyyy-MM-dd HH:mm:ss") ]

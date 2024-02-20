@@ -1,0 +1,8 @@
+파라미터 : [int system_id, string target_id, string from]
+설명 : xapm_etoe_data_set 테이블에서 tid_list를 가져오는 프로시저
+
+ table from=$("from") to=$("to") xapm_txn_detail
+| search first==1 and tx_code==$("target_id")
+| eval top_tid = str(tid) | fields top_tid 
+| join type=left top_tid [ table from=$("from") to=$("to") xapm_etoe_data_set  | fields top_tid, tid_list ] 
+| eval tid_list = if(isnull(tid_list), top_tid, tid_list) | # 본사에만 쓰는 구문, top_tid이면 무조건 tid_list 존재함

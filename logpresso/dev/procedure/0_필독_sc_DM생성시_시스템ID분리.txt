@@ -1,0 +1,30 @@
+파라미터 : []
+설명 : 수집기용) DM 생성 프로시저 생성 가이드
+
+# DM데이터를 2개 이상의 system_id로 분리해서 사용해야할 경우
+# [ 
+예시) 
+대상 프로시저 : 33_sc_exem_aiops_anls_inst_db
+기존 시스템ID : 77
+신규 시스템ID : 99
+
+1. 33_sc_exem_aiops_anls_inst_db_99로 새로운 프로시저를 생성한다.
+  1-1. setq 부분에 필터링 구문을 추가한다.
+      예) search system_id == 99
+  1-2. 본문 부분에 system_id가 들어갈수 있도록 구문을 추가한다.(DL에 system_id유무에 따라 구분)
+      예1-있다면) set system_id = 99 | ...생략... | search system_id == $("system_id")
+      예2-없다면) eval system_id = 99
+
+2. 33_sc_exem_aiops_anls_inst_db_77로 새로운 프로시저를 생성한다.
+  2-1. 1-1과 동일한 방법
+  2-2. 1-2와 동일한 방법
+
+3. 수집기가 매분20초에 실행하는 DM생성 스케쥴러에 동작 여부를 전달한다.
+  1-1. 기존 33_sc_exem_aiops_anls_inst_db를 실행하지 않도록 중지한다.
+      예) proc 0_sc_switch("33_sc_exem_aiops_anls_inst_db","false")	
+  1-2. 신규 33_sc_exem_aiops_anls_inst_db_99를 실행하도록 설정한다.
+      예) proc 0_sc_switch("33_sc_exem_aiops_anls_inst_db_77","true")
+      예) proc 0_sc_switch("33_sc_exem_aiops_anls_inst_db_99","true")
+      
+기타. 중복으로 저장된 경우
+- 시작지점의 일자를 찾아서 삭제 후 재적재를 진행한다.

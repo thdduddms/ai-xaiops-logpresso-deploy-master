@@ -1,0 +1,27 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+bypass | # health_check_ora_server_time_14 로 대체
+| # [ dbquery maxgauge_222 select server_type, server_id, server_time, logging_time, status, host_ip, CAST(CAST((concat('X', host_ip)) AS bit(32)) AS int) as host_ip_int from public.ora_server_time
+|# server_type : 0-DGServer / 1-?? / 2-DB / 3-?? / 15-??
+| # status : 0-정상, 1-맥스게이지<->수집데몬, 2-수집데몬<->DB인스턴스
+| eval inst_type= case (server_type==1, "was",
+						server_type==2, "db", 
+                        server_type==3, "web"),
+		host_ip_hex = host_ip,
+        host_ip = if( isnotnull(host_ip_hex), str(ip(host_ip_int)), null),
+		status_str = case (status==0 , "CONNECTED",
+                   						status==1 , "DISCONNECTED",
+                   						status==2 , "SERVER_DOWN")
+| # eval _time = logging_time
+| fields - host_ip_int
+| import ora_server_time
+
+|# PG에 인서트할때 필요한 부분. 기존 쿼리는 유지하고 PG 포맷에 맞게 변경한다.
+| search status != 0 and isnotnull(status_str)
+| eval sys_id = 102, server_id =str(server_id), time = datetrunc(now(), "1m"), status = if(status_str == "SERVER_DOWN", "DOWN", status_str)
+| rename inst_type as target_type, server_id as target_id
+| fields sys_id, time, target_type, target_id, status
+| join sys_id, target_id,target_type [ dbquery ai_server select inst_type as target_type, target_id, sys_id from xaiops_instance ] 
+| dboutput ai_server rowretry=f stoponfail=t table=lp_disconnect_status
+sys_id, time, target_type, target_id, status

@@ -1,0 +1,35 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+set system_id =$("system_id")
+
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(now(), "1m"))
+| set start = dateadd( $("from"), "min", -5)
+
+| table from=$("from") to=$("to") nms_if_perf_csv 
+| join type=left _time, user_dev_name [ 
+table from=$("from") to=$("to") nms_dev_perf_csv
+| pivot first(value) as value cols item_type by user_dev_name, _time, dev_ip ]
+| eval  _target = mng_no, system_id=$("system_id")
+| rename mng_no as network_id 
+| search isnotnull(memory_usage) and isnotnull(cpu_usage)
+| stats sum(inbps) as inbps, sum(inpps) as inpps, sum(outbps) as outbps, sum(outpps) as outpps, avg(cpu_usage) as cpu_usage, avg(memory_usage) as memory_usage by _time, system_id, network_id, user_dev_name, dev_ip, _target
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+		inbps = floor(inbps, 4), inpps = floor(inpps, 4), outbps = floor(outbps, 4), outpps = floor(outpps, 4), cpu_usage = floor(cpu_usage, 4), memory_usage = floor(memory_usage, 4) |# , temperature = floor(temperature, 4)
+| join type=left network_id [
+table from=$("start") to=$("to") nms_evt_csv
+| rename mng_no as network_id
+| stats count(evt_name) as event_count by network_id ]
+| eval event_count = nvl(event_count, 0)
+| # 임시. DDS에서 동적 처리 개발 완료 시점에 fields 구문 삭제 필요(23.11.1-이유린)
+| # 1220 영은 fields 구문 주석처리 // 영호님 요청
+| # fields _target, system_id, _time, cpu_usage, dev_ip, event_count, inbps, 
+inpps, memory_usage, network_id, outbps, outpps, target_type, user_dev_name, time
+
+| # [ XAIOps 대상만 필터링 하기
+| eval target_type = nvl(inst_type, "network"),
+	key = concat(system_id, "|", target_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)
+| fields - key, enable  ]

@@ -1,0 +1,44 @@
+파라미터 : []
+설명 : 통계 & 내역 > 수집 데이터 차트 > 테이블 목록 조회
+
+# 데이터 분석을 위한 테이블 목록 조회 **
+| system tables | fields table, retention_policy
+| join type=left +table [
+	confdb docs araqne-log-api logger
+	| fields fullname, interval
+	| rename fullname as full_name, interval as local_interval
+	| join type=right +full_name [ 
+		confdb docs logpresso loggers 
+        | search isnotnull(table_name) 
+        | fields table_name, full_name
+ 	 	| eval logger_name = if(full_name=="local\\*", full_name, substr(full_name, indexof(full_name, "\\")+1))
+	  	| eval logger_name = substr(full_name, indexof(full_name, "\\")+1)
+	  | join type=left +logger_name [
+      		sentry 
+            | sentry-loggers 
+            | fields guid, name, interval
+    | search isnotnull(name)
+    | stats min(interval) as sentry_interval by name
+    | rename name as logger_name
+  	]
+  | fields full_name, sentry_interval, table_name
+  | rename table_name as table
+  ]
+| eval interval = nvl(sentry_interval, local_interval), interval = if(interval != 0, interval, null)
+]
+| sort limit=1 -interval by table
+| eval _table = table
+| lookup lu_data_chart_table _table output use_yn, interval as def_interval, desc, target_field, inst_type, product_use_yn
+|  eval product_use_yn=if(product_use_yn=="Y", true, false)
+| search use_yn == "Y"
+| eval interval = nvl(if(isnull(def_interval), concat(int(interval/1000), "s"), def_interval), "60s")
+| fields table, desc, interval, target_field, inst_type, product_use_yn
+
+| # [result_fields[
+desc || string || null
+inst_type || string || not null
+interval || string || not null
+product_use_yn || bool || not null
+table || string || not null
+target_field || string || not null
+| # ]result_fields]

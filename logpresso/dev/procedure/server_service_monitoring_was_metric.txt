@@ -1,0 +1,25 @@
+파라미터 : [int system_id, string tx_code, string txn_name, string field_name, string from]
+설명 : 모니터링 > 서비스 모니터링 > was - was_id별 지표  조회
+
+# 서비스 모니터링 내 지표 데이터 클릭시 나오는 팝업 데이터 리턴 - was_id별 정보 **
+
+| set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") xapm_txn_detail 
+| search tx_code==$("tx_code")
+| eval
+    error_count = nvl(exception, 0)
+| stats count as exec_count, avg(txn_elapse) as elapse_avg, sum(error_count) as error_count by was_id
+| eval 
+	elapse_avg = floor(elapse_avg, 4),
+    target_id=str(was_id),
+    value = floor(field($("field_name")), 2), 
+    name = $("field_name"),
+    inst_type="was"
+| sort -value
+| fields target_id, inst_type, value
+
+| # [result_fields[
+inst_type || string || not null
+target_id || string || not null
+value || double || not null
+| # ]result_fields]

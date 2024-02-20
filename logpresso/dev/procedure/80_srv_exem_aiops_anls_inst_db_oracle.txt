@@ -1,0 +1,83 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : null
+
+set system_id =$("system_id")
+| set inst_product_type = "ORACLE"
+
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(now(), "1m"))
+| table from=$("from") to=$("to") ora_db_stat
+| eval name=stat_name,  value= avg_value, stat_type = "db_stat"
+| fields _time, name, value, db_id, system_id, stat_type
+| union [ table from=$("from") to=$("to") ora_db_wait
+         | eval name=event_name, value=avg_wait_time, stat_type = "db_wait" 
+         | fields _time, name, value, db_id, system_id, stat_type ]
+| eval join_metric = name 
+| join type=left join_metric, stat_type [
+        lookuptable lu_stat_metric_info
+        | eval join_metric = field( concat( "metric_by_", lower($("inst_product_type"))))
+        | search isnotnull(join_metric)
+        | fields metric_id, stat_type, join_metric ] 
+| search isnotnull(metric_id) and system_id == $("system_id")
+| pivot sum(value) as value by _time, db_id, system_id for metric_id 
+| eval
+    time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+    db_id = string(db_id),
+    _target = db_id,
+    solution="maxgauge",
+    inst_product_type=upper($("inst_product_type")), 
+    system_id=$("system_id")
+    
+| # db stat, wait 지표는 이벤트성이기 때문에, null=0으로 판단
+| eval
+	active_sessions= nvl(active_sessions, 0),
+	buffer_busy_waits= nvl(buffer_busy_waits, 0),
+	concurrency_wait_time= nvl(concurrency_wait_time, 0),
+	consistent_gets= nvl(consistent_gets, 0),
+	cpu_used_by_this_session= nvl(cpu_used_by_this_session, 0),
+	cursor_pin_s_wait_on_x= nvl(cursor_pin_s_wait_on_x, 0),
+	db_block_changes= nvl(db_block_changes, 0),
+	db_block_gets= nvl(db_block_gets, 0),
+	db_file_scattered_read= nvl(db_file_scattered_read, 0),
+	db_file_sequential_read= nvl(db_file_sequential_read, 0),
+	db_time= nvl(db_time, 0),
+	enq_sq_contention= nvl(enq_sq_contention, 0),
+	enq_tx_index_contention= nvl(enq_tx_index_contention, 0),
+	enq_tx_row_lock_contention= nvl(enq_tx_row_lock_contention, 0),
+	enqueue_requests= nvl(enqueue_requests, 0),
+	enqueue_waits= nvl(enqueue_waits, 0),
+	file_io_service_time= nvl(file_io_service_time, 0),
+	file_io_wait_time= nvl(file_io_wait_time, 0),
+	latch_cache_buffers_chains= nvl(latch_cache_buffers_chains, 0),
+	latch_shared_pool= nvl(latch_shared_pool, 0),
+	library_cache_lock= nvl(library_cache_lock, 0),
+	library_cache_mutex_x= nvl(library_cache_mutex_x, 0),
+	log_file_sequential_read= nvl(log_file_sequential_read, 0),
+	log_file_switch_checkpoint_incomplete= nvl(log_file_switch_checkpoint_incomplete, 0),
+	log_file_switch_completion= nvl(log_file_switch_completion, 0),
+	log_file_sync= nvl(log_file_sync, 0),
+	non_idle_wait_time= nvl(non_idle_wait_time, 0),
+	physical_writes= nvl(physical_writes, 0),
+	physical_writes_direct= nvl(physical_writes_direct, 0),
+	read_by_other_session= nvl(read_by_other_session, 0),
+	recursive_calls= nvl(recursive_calls, 0),
+	redo_size= nvl(redo_size, 0),
+	row_cache_lock= nvl(row_cache_lock, 0),
+	session_logical_reads= nvl(session_logical_reads, 0),
+	user_commits= nvl(user_commits, 0)
+
+
+| # fields _target, _time, system_id, active_sessions, buffer_busy_waits, concurrency_wait_time, 
+consistent_gets, cpu_used_by_this_session, db_block_changes, db_block_gets, db_id, db_time, 
+enq_tx_index_contention, enqueue_requests, enqueue_waits, execute_count, file_io_service_time, 
+file_io_wait_time, inst_product_type, latch_cache_buffers_chains, log_file_sequential_read, 
+log_file_switch_completion, log_file_sync, non_idle_wait_time, parse_time_elapsed, physical_writes, 
+physical_writes_direct, recursive_calls, redo_size, session_logical_reads, solution
+
+| # [ XAIOps 대상만 필터링 하기
+| eval target_type = nvl(inst_type, "db"),
+	key = concat(system_id, "|", target_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)    
+| fields - key, enable 
+ 

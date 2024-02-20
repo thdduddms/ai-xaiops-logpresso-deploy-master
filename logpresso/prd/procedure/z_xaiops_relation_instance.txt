@@ -1,0 +1,10 @@
+파라미터 : []
+설명 : div <> inst_group <> inst 관계 확인 (memlookup)
+
+dbquery ai_server 
+select b.sys_id as system_id, c.inst_group_id as group_id, c.inst_group_name as group_name, b.target_id, b.inst_type, b.enable, name as pg_target_name
+	from xaiops_instance_group_instance_relation a
+	right join xaiops_instance b on a.inst_id =b.inst_id 
+	left join xaiops_instance_group c on a.inst_group_id =c.inst_group_id 
+| eval key = concat(group_name, "_", target_id), group_type = "inst"
+| memlookup op=build name=z_xaiops_relation_instance key=key system_id, inst_type, target_id, pg_target_name, enable, group_type, group_id, group_name

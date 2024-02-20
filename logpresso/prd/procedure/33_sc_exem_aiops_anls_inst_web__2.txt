@@ -1,0 +1,19 @@
+파라미터 : []
+설명 : 수집기용) DM생성 - 이상탐지/부하예측 인스턴스>WEB
+
+set system_id = 2
+| setq [ table duration=10m exem_aiops_anls_inst_web
+		| search  system_id == 2
+        | stats max(_time) as last_time
+        | eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+        | fields last_time ]
+
+| proc 80_srv_exem_aiops_anls_inst_web($("system_id"),null, null) 
+|  search _time > $("last_time")  
+
+| import exem_aiops_anls_inst_web
+
+| fields _time, system_id, _target
+| eval mart = "exem_aiops_anls_inst_web", lp_time = now(), _target = str(_target), module = "exem_aiops_anls_inst", inst_type = "web"
+| stats count by mart, _time, system_id, _target, lp_time, mart, module, inst_type
+| import exem_mart_result

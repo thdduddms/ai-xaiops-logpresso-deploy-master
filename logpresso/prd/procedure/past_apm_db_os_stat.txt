@@ -1,0 +1,14 @@
+파라미터 : [string limit, string start]
+설명 : {schema}.apm_db_os_stat 과거 데이터 입력
+
+setq [
+table to=$("limit") apm_db_os_stat
+| stats max(_time) as last_time
+| eval last_time = nvl(last_time, date($("start"),"yyyyMMddHHmm"))
+| eval last_time = string(last_time, "yyyy-MM-dd HH:mm:ss")
+| fields last_time ]
+| dbquery maxgauge_222
+	select t1.db_id, t1.time, t1.os_id, t1.max_value, t1.avg_value, t2.os_name, 2 as system_id, cast(t1.db_id as VARCHAR) as _target from fepdb01.apm_db_os_stat t1 left outer join ora_db_os_name t2 on t1.os_id = t2.os_id and t1.db_id = t2.db_id where time > :last_time and time < cast(:last_time as timestamp) + interval '240 min' order by t1.time
+ | eval _time = date(time, "yyyy-MM-dd HH:mm:ss"), _host = "2.fepdb01.apm_db_os_stat"
+ | search _time < date($("limit"), "yyyyMMddHHmm")
+ | import apm_db_os_stat

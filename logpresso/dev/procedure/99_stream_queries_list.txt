@@ -1,0 +1,5 @@
+파라미터 : []
+설명 : 관리자용] 스트림쿼리 목록 조회
+
+confdb docs logpresso stream_queries
+| fields name, enabled, async, description, interval, source_type, tables, loggers, streams, query_string

@@ -1,0 +1,40 @@
+파라미터 : [int system_id, string inst_type]
+설명 : 설정 > 시스템 > 시스템 연동 >> 거래코드 <> 업무 main (데미데이터)
+
+json "{}" | eval tx_code="10", biz_code="test1", biz_name="비대면"
+| union [ json "{}" | eval tx_code="7", biz_code="test1", biz_name="비대면" ]
+| union [ json "{}" | eval tx_code="2", biz_code="test2", biz_name="로그인" ]
+
+| union [ json "{}" | eval tx_code="6", biz_code="3", biz_name="계좌처리" ]
+
+| union [ json "{}" | eval tx_code="200", biz_code="5", biz_name="대출" ]
+| union [ json "{}" | eval tx_code="210", biz_code="5", biz_name="대출" ] 
+| union [ json "{}" | eval tx_code="12", biz_code="3", biz_name="계좌처리" ]
+| union [ json "{}" | eval tx_code="13", biz_code="3", biz_name="계좌처리" ]
+| union [ json "{}" | eval tx_code="14", biz_code="3", biz_name="계좌처리" ]
+| union [ json "{}" | eval tx_code="15", biz_code="3", biz_name="계좌처리" ]
+
+| union [ json "{}" | eval tx_code="40", biz_code="test1", biz_name="비대면" ]
+| union [ json "{}" | eval tx_code="41", biz_code="test1", biz_name="비대면" ]
+| union [ json "{}" | eval tx_code="42", biz_code="test1", biz_name="비대면" ]
+| union [ json "{}" | eval tx_code="43", biz_code="test1", biz_name="비대면" ]
+| union [ json "{}" | eval tx_code="44", biz_code="test1", biz_name="비대면" ]
+
+| union [ json "{}" | eval tx_code="50", biz_code="test4", biz_name="자산" ]
+| union [ json "{}" | eval tx_code="51", biz_code="test4", biz_name="자산" ]
+| union [ json "{}" | eval tx_code="52", biz_code="test4", biz_name="자산" ]
+
+| eval inst_type="code"
+
+| eval system_id=$("system_id"),
+		 _target= if(contains(tx_code, "/"), tohex( hash("md5", binary(tx_code))), string(tx_code))
+| search inst_type == nvl($("inst_type"), inst_type) 
+
+| fields - inst_type, system_id
+| sort tx_code 
+
+| # [result_fields[
+biz_code || string || not null
+biz_name || string || not null
+tx_code || string || not null
+| # ]result_fields]

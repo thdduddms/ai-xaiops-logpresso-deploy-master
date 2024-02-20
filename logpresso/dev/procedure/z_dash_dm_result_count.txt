@@ -1,0 +1,26 @@
+파라미터 : [datetime from, datetime to, string module, string inst_type]
+설명 : 대시보드 > DM 저장결과 > {타입} 그룹별 저장 결과
+
+# 호스트그룹과 매핑된 host에 대한 값만 리턴한다 
+| # set inst_type = "os" |  # set system_id = 1
+| set from = if( isnull($("from")), datetrunc(ago("10m"), "1m"), $("from"))
+| set to = if( isnull($("to")), datetrunc(dateadd(now(), "min", -1), "1m"), $("to"))
+|  memlookup name=z_xaiops_relation_infra| search inst_type == $("inst_type") and enable
+| union [ memlookup name=z_xaiops_relation_instance | search inst_type == $("inst_type") and enable ]
+| union [ memlookup name=z_xaiops_relation_service | search inst_type == $("inst_type") and enable ]
+| join type=inner system_id [
+	table z_xaiops_system_id
+    | eval system_id = if(isnull(int($("system_id"))), system_id, int($("system_id")))
+	| fields system_id  ]
+| fields - key, enable
+| eval _time = daterange($("from"), $("to"), "1m")
+| explode _time
+| join type=left _time, target_id [
+          table from=$("from") exem_mart_result
+          | search inst_type == $("inst_type") and module==$("module")
+          | rename _target as target_id
+          | fields target_id, _time, inst_type, mart, count ]
+| eval group_id = nvl(group_id, -1), group_name = nvl(group_name, "그룹 미분류")
+| stats sum(count) as dm_save_count, count(mart) as dm_target_count, count as xaiops_target_count by _time, group_name
+| eval loss_target_count = xaiops_target_count - dm_target_count
+| timechart span=1m sum(loss_target_count) by group_name 

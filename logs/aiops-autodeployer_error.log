@@ -1,0 +1,28 @@
+2024/02/20 10:17:32.561 [ERROR]  [org.springframework.boot.diagnostics.LoggingFailureAnalysisReporter] [main]- 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 24568 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 24568 or configure this application to listen on another port.
+
+2024/02/20 10:18:46.303 [ERROR]  [org.springframework.boot.diagnostics.LoggingFailureAnalysisReporter] [main]- 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 24568 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 24568 or configure this application to listen on another port.
+

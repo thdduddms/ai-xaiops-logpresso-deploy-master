@@ -1,0 +1,32 @@
+파라미터 : [int system_id, string target_id, string from]
+설명 : 모니터링 > 인스턴스 장애분석
+
+# 인스턴스 장애분석 내 현재 인스턴스가 호출한 인스턴스 리턴 - 화면 오른쪽, 더미데이터 **
+| # [ set from=202402161323 | set target_id="3210" | set system_id="102"| ]
+| set from= datetrunc( date( $("from"), "yyyyMMddHHmm"), "1m")
+| set to= datetrunc( dateadd( $("from"), "min", 1), "1m")
+| table from=$("from") to=$("to") xapm_etoe_remote_call
+| eval target_id = string(server_id), tid=str(tid), c_tid=str(c_tid)
+| search target_id != $("target_id")  
+| join tid [
+    table from=$("from") to=$("to") xapm_etoe_remote_call
+    | eval target_id = string(server_id), tid=str(tid), c_tid=str(c_tid)
+    | search isnotnull(c_tid) and target_id == $("target_id")
+    | rename c_tid as tid
+    | fields tid
+    | limit 100000
+]
+| stats count by target_id
+| union [ 
+table from=$("from") to=$("to") xapm_txn_detail
+| eval target_id = string(was_id), tid=str(tid)
+| stats count by target_id  ]
+
+
+
+| fields target_id, count
+
+| # [result_fields[
+count || long || not null
+target_id || string || not null
+| # ]result_fields]

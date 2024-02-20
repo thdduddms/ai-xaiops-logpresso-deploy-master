@@ -1,0 +1,32 @@
+파라미터 : [int system_id, string table, string inst_type, string inst_product_type, string from, string to]
+설명 : 통계 & 내역 > 수집 데이터 차트 > 지표
+
+# 데이터 분석을 위한 테이블의 지표 목록 조회 **
+| # { [set from=202304010000 | set to=202304060000 | set table="exem_aiops_anls_inst_db" | set system_id = 2  |  set inst_product_type="POSTGRES" | # } ]
+| set module=replace($("table"), concat("_", $("inst_type")), "")
+| table from=$("from") to=$("to") $("table") 
+| search if(isnotnull(system_id), system_id==$("system_id"), true) 
+| summary   
+| search in(type, "int", "long", "float", "double") 
+	and not(in(name, "_id", "_target", "partition_key", "stat_version")) 
+    and not(name == "*_id")
+    and name!="*_tx"
+| eval module=$("module"), metric_filter=false
+| fields name, module, metric_filter
+|   join type=left name, module [ 
+	lookuptable lu_stat_metric_info 
+	| search isnotnull( field(concat("metric_by_", lower($("inst_product_type"))))) and contains(stat_type, $("inst_type"))
+	| rename metric_id as name 
+    | fields  name
+	| eval module=$("module"), metric_filter=true 
+    ]
+| search ( isnotnull($("inst_product_type")) and metric_filter) 
+		or( $("inst_product_type")=="" ) 
+        or( isnull($("inst_product_type"))) | # 0418수정(이유린)
+| # search ( isnotnull($("inst_product_type")) and metric_filter) or( isnull($("inst_product_type")) )
+| fields  name
+| sort name
+
+| # [result_fields[
+name || string || not null
+| # ]result_fields]

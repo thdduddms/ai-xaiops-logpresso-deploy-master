@@ -1,0 +1,19 @@
+파라미터 : []
+설명 : (메모리룩업) was 티어 메타 정보
+
+dbquery ai_server
+select
+    a.sys_id as system_id,
+    a.tier_id,
+    a."name" as tier_name,
+    a.e2e_code,
+    d.target_id,
+    d.inst_type as inst_type,
+    concat(a.sys_id, '-', d.target_id) as key
+from xaiops_tier a
+inner join xaiops_system b on b.sys_id = a.sys_id
+inner join xaiops_tier_instance_relation c on c.tier_id = a.tier_id
+inner join xaiops_instance d on d.inst_id = c.inst_id and d.inst_type = 'was'
+where e2e_code IS NOT NULL
+| eval was_id = target_id
+| memlookup op=build name=lookup_tier_was_instance key=key system_id, tier_id, tier_name, e2e_code, target_id, inst_type, was_id

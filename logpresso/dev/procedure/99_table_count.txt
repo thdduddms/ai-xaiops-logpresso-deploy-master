@@ -1,0 +1,7 @@
+파라미터 : []
+설명 : 테이블>타겟별 수집 건수 조회
+
+table duration=15m exem_aiops_anls_log_*, log_*
+| eval _time = str(datetrunc(_time, "1m"), "HH:mm")
+| rename _host as _target
+| pivot count rows _table, _target cols _time

@@ -1,0 +1,50 @@
+파라미터 : [string system_id, string schema, string jdbc_profile, string type]
+설명 : (미사용) 방법3. type별로 신규 수집설정을 생성하는 txt를 생성
+
+| bypass
+| # [
+# type별로 신규 수집설정을 생성하는 txt를 생성 **
+| confdb docs araqne-log-api logger  
+| fields configs, factory_name, factory_namespace, name, description 
+|# logger의 정보 추출 
+| parsemap overlay=t field=configs  
+| fields - configs 
+| eval
+     name = split(name, "."),
+     len = len(name),
+     is_mxg = if(len == 3, true, false),
+     key = case(is_mxg, valueof(name, 2), valueof(name, 1))  
+| search contains(key, $("type")) and (isnotnull(key) and isnotnull(sql))   
+|# sql문 내부의 기존 schema, sys_id 변경  
+|eval
+     schema = if(is_mxg,lower(valueof(name,1)), null),
+     sql = if( isnotnull(schema), replace(lower(sql), concat( schema, "."), concat(lower($("schema")),".")), sql),
+     where = if( isnotnull(schema), replace(lower(where), concat( schema, "."), concat(lower($("schema")),".")), where),
+	     is_repo_ora = if( right(trim( $("type")), 1) == "O", true, false),
+     sql = if( is_repo_ora,
+    	replace(sql, concat( "{system_id} as \"system_id\""), concat($("system_id"), " as \"system_id\"")),
+            replace(sql, concat( "{system_id} as system_id"), concat($("system_id"), " as system_id")))     
+|# 새로 생성할 logger의 name 변경  
+| eval
+     table_name= if(is_mxg, valueof(name,2), valueof(name,1)),
+     table_name=replace( table_name, concat("_", $("type")), ""),
+     name2 = if(is_mxg, concat($("schema"), ".", valueof(name,2)), valueof(name,1)),
+     name = array( $("system_id"), ".", name2),
+     name = strjoin("", name),
+     name = replace( name, concat("_", $("type")), ""),
+     jdbc_profile=$("jdbc_profile") 
+| stats dc(name) as count, values(jdbc_profile) as jdbc_profile, values(sql) as sql, values(where) as where by factory_name, factory_namespace, name, column, database_name, data_column, data_format, iter_limit, key, macro_start_date, table_name  
+| eval
+     sql = valueof(sql,0),
+     where = valueof(where,0),
+     jdbc_profile = valueof(jdbc_profile,0),
+     sql = split(sql, "$where"),
+     sql1 = valueof(sql,0),
+     sql2=valueof(sql,1),
+     sql2 = concat("\\$where",sql2),
+     init_date= str(datetrunc(dateadd(now(), "min", -20), "1m"), "yyyy-MM-dd HH:mm:ss"),
+     date_type="date",
+     date_format="yyyy-MM-dd HH:mm:ss"  
+| fields name, table_name, jdbc_profile, sql1, sql2, where, column, init_date,date_type, date_format 
+| eval full_text=concat(name,";",table_name,";",jdbc_profile,";",sql1,";",sql2,";",where,";",column,";",init_date,";",date_type,";",date_format) 
+| # outputtxt overwrite=t partition=t encoding="UTF-8" script/{now:yyyyMMdd}/create_local_jdbc_logger.txt full_text	 

@@ -1,0 +1,25 @@
+파라미터 : [int system_id]
+설명 : 설정 > 시스템 > 시스템연동 >> 로그 main
+
+# 설정>시스템>시스템연동>>로그 수집기 목록 조회 **
+
+# 변경후
+| proc server_system_link_log_local()
+| proc server_system_link_log_sentry()
+| # eval is_sentry=if(guid=="local", "local", "sentry")
+| eval is_sentry=if(guid=="local", false, true), name=target_id
+| search system_id == $("system_id", 2) 
+| memlookup op=build name=lookup_log_logger_info key=target_id date_pattern, date_format, name, system_id
+| fields target_id, host_name, is_sentry, factory_name, status, log_path, desc
+
+| # [result_fields[
+collect_type || string || not null
+desc || string || null
+host_name || string || not null
+is_collect || bool || not null
+is_sentry || bool || not null
+log_category || string || not null
+log_name || string || not null
+log_path || string || not null
+target_id || string || not null
+| # ]result_fields]

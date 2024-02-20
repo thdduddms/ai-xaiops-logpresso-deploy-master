@@ -1,0 +1,110 @@
+파라미터 : []
+설명 : analysis_inst_was DM 생성
+| 임시 import dm__anls_inst_was
+
+# 아래 쿼리로 DM을 저장하세요.(쿼리 출처 : 90_gen_dm_import_anls)
+
+
+| # 마지막 저장 일시 조회
+| setq [ table duration=10m dm__anls_inst_was
+	| search system_id == 102
+	| stats max(_time) as last_time
+	| eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+	| fields last_time ]
+| set inst_type = "was"
+| set from_date=datetrunc(dateadd(now(), "min", -4), "1m") 
+| set to_date=datetrunc(now(), "1m")
+| table from=$("from_date") to=$("to_date") dl__anls_inst_was
+
+| # [ exception_1 ]
+
+| # 1분 통계 처리
+| eval _time = datetrunc(_time, "1m")
+| stats 
+	avg(active_db_sessions) as active_db_sessions, 
+	avg(active_txns) as active_txns, 
+	avg(extcall_count) as extcall_count, 
+	avg(extcall_time) as extcall_time, 
+	avg(fail_count) as fail_count, 
+	avg(fetch_time) as fetch_time, 
+	avg(jvm_cpu_usage) as jvm_cpu_usage, 
+	avg(jvm_gc_count) as jvm_gc_count, 
+	avg(jvm_gc_time) as jvm_gc_time, 
+	avg(jvm_heap_usage) as jvm_heap_usage, 
+	avg(jvm_thread_count) as jvm_thread_count, 
+	avg(open_file_count) as open_file_count, 
+	avg(open_socket_count) as open_socket_count, 
+	avg(os_cpu) as os_cpu, 
+	avg(prepare_time) as prepare_time, 
+	avg(request_rate) as request_rate, 
+	avg(response_time) as response_time, 
+	avg(sql_elapse) as sql_elapse, 
+	avg(sql_exec_count) as sql_exec_count, 
+	avg(sql_fetch_count) as sql_fetch_count, 
+	avg(sql_prepare_count) as sql_prepare_count, 
+	avg(tps) as tps
+    by _time, system_id, _target
+| # [ stat_exception_1 ]
+
+| # 결측치 처리
+| # eval 	active_db_sessions = nvl( active_db_sessions, 0 ), 
+	active_txns = nvl( active_txns, 0 ), 
+	extcall_count = nvl( extcall_count, 0 ), 
+	extcall_time = nvl( extcall_time, 0 ), 
+	fail_count = nvl( fail_count, 0 ), 
+	fetch_time = nvl( fetch_time, 0 ), 
+	jvm_cpu_usage = nvl( jvm_cpu_usage, 0 ), 
+	jvm_gc_count = nvl( jvm_gc_count, 0 ), 
+	jvm_gc_time = nvl( jvm_gc_time, 0 ), 
+	jvm_heap_usage = nvl( jvm_heap_usage, 0 ), 
+	jvm_thread_count = nvl( jvm_thread_count, 0 ), 
+	open_file_count = nvl( open_file_count, 0 ), 
+	open_socket_count = nvl( open_socket_count, 0 ), 
+	os_cpu = nvl( os_cpu, 0 ), 
+	prepare_time = nvl( prepare_time, 0 ), 
+	request_rate = nvl( request_rate, 0 ), 
+	response_time = nvl( response_time, 0 ), 
+	sql_elapse = nvl( sql_elapse, 0 ), 
+	sql_exec_count = nvl( sql_exec_count, 0 ), 
+	sql_fetch_count = nvl( sql_fetch_count, 0 ), 
+	sql_prepare_count = nvl( sql_prepare_count, 0 ), 
+	tps = nvl( tps, 0 )
+
+| # 소수점 처리
+| set floor_decimal = 2
+| eval time = str(_time, "yyyy-MM-dd HH:mm:ss"),
+	active_db_sessions = floor( active_db_sessions, $("floor_decimal") ), 
+	active_txns = floor( active_txns, $("floor_decimal") ), 
+	extcall_count = floor( extcall_count, $("floor_decimal") ), 
+	extcall_time = floor( extcall_time, $("floor_decimal") ), 
+	fail_count = floor( fail_count, $("floor_decimal") ), 
+	fetch_time = floor( fetch_time, $("floor_decimal") ), 
+	jvm_cpu_usage = floor( jvm_cpu_usage, $("floor_decimal") ), 
+	jvm_gc_count = floor( jvm_gc_count, $("floor_decimal") ), 
+	jvm_gc_time = floor( jvm_gc_time, $("floor_decimal") ), 
+	jvm_heap_usage = floor( jvm_heap_usage, $("floor_decimal") ), 
+	jvm_thread_count = floor( jvm_thread_count, $("floor_decimal") ), 
+	open_file_count = floor( open_file_count, $("floor_decimal") ), 
+	open_socket_count = floor( open_socket_count, $("floor_decimal") ), 
+	os_cpu = floor( os_cpu, $("floor_decimal") ), 
+	prepare_time = floor( prepare_time, $("floor_decimal") ), 
+	request_rate = floor( request_rate, $("floor_decimal") ), 
+	response_time = floor( response_time, $("floor_decimal") ), 
+	sql_elapse = floor( sql_elapse, $("floor_decimal") ), 
+	sql_exec_count = floor( sql_exec_count, $("floor_decimal") ), 
+	sql_fetch_count = floor( sql_fetch_count, $("floor_decimal") ), 
+	sql_prepare_count = floor( sql_prepare_count, $("floor_decimal") ), 
+	tps = floor( tps, $("floor_decimal") )
+
+| # [ exception_2 ]
+
+| search _time > $("last_time")
+| eval inst_type=nvl(inst_type, $("inst_type"))
+
+| import dm__anls_inst_was
+
+| # evtctx - exem_aiops_anls_inst_was
+| fields _time, system_id, _target, inst_type
+| stats count by _time, system_id, _target, inst_type
+| eval module = "exem_aiops_anls_inst", inst_type = nvl(inst_type, $("inst_type")), key= concat( module, "_", inst_type, "_", _target)
+| evtctxadd key=key topic="mart_result" maxrows=10 isnotnull(_target)

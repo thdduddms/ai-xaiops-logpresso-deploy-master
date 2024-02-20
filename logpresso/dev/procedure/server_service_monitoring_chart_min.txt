@@ -1,0 +1,36 @@
+파라미터 : [int system_id, string target_id, string from, string to]
+설명 : !변경필요! 모니터링 > 서비스 모니터링 >> 구간별 수행시간 차트
+
+# 서비스 모니터링 내 구간별 수행시간 차트 데이터 리턴 **
+| set from= datetrunc( date($("from"), "yyyyMMddHHmm"), "1m")
+| set to= datetrunc(date($("to"), "yyyyMMddHHmm"), "1m")
+| table order=asc from=$("from") to=$("to") exem_aiops_anls_inst_code
+| search _target == $("target_id") and system_id == $("system_id")
+| # 본사 개발 임시용 rand 처리 (22.11.14 윤철민 확인 / 작성자는 ??)
+| # eval 
+		time = str(_time, "yyyy-MM-dd HH:mm:ss"),
+        elapse02_avg = if(elapse02_avg == 0, rand(5), elapse02_avg),
+        elapse03_avg = if(elapse03_avg == 0, rand(5), elapse03_avg), 
+        elapse04_avg = if(elapse04_avg == 0, rand(5), elapse04_avg),
+| fields _time, time, exec_count, error_count, elapse01_avg, elapse02_avg, elapse03_avg, elapse04_avg, elapse05_avg, elapse06_avg, elapse07_avg, elapse08_avg, elapse09_avg, elapse10_avg, system_id, tx_code, tx_code_name
+
+|# 구간 정보에 따라 리턴 컬럼이 달라짐
+| # [result_fields[
+_time || date || not null
+elapse01_avg || double || not null
+elapse02_avg || double || not null
+elapse03_avg || double || not null
+elapse04_avg || double || not null
+elapse05_avg || double || not null
+elapse06_avg || double || not null
+elapse07_avg || double || not null
+elapse08_avg || double || not null
+elapse09_avg || double || not null
+elapse10_avg || double || not null
+error_count || long || not null
+exec_count || long || not null
+system_id || int || not null
+time || string || not null
+tx_code || string || not null
+tx_code_name || string || not null
+| # ]result_fields]

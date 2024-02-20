@@ -1,0 +1,13 @@
+실행 주기 : 0 0 * * *
+경보 사용 : null
+
+dbquery maxgauge_222 
+SELECT
+	db_id,
+    cast(db_id as varchar) as _target,
+    EVENT_ID as "event_id",
+	EVENT_NAME as "event_name",
+	WAIT_CLASS as "wait_class"
+FROM
+	ORA_EVENT_NAME
+| import ora_event_name

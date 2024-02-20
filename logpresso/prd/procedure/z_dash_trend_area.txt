@@ -1,0 +1,19 @@
+파라미터 : []
+설명 : 대시보드 > 수집량 > 영역별 수집 추이
+
+ set total_volume = if(isnull($("total_volume")), 3, $("total_volume"))
+| table duration=30d sys_logger_stats 
+| eval type= case(logger_name == "*xapm*", "APM", logger_name == "local*ora*", "DPM", logger_name == "*sentry*", "SMS", logger_name == "*disk*", "SMS", logger_name == "*xaiops*", "로그이상탐지", logger_name == "*102.*", "로그이상탐지", "etc")
+| union  [
+	table duration=30d  sys_table_trends    
+  	| join table [  
+  			confdb docs logpresso scheduled_queries      
+    		| search (contains(query_string, "wget") or contains(query_string,"dbquery")) and contains(query_string, "import")
+    		| eval table = groups(query_string, "\\| import (\\S+)")      | explode table      | fields table    
+    		| stats count by table | fields table
+    ] 
+    | eval type = case(table == "xapm*", "APM", table == "ora*", "DPM", table == "apm*", "DPM", table == "*xaiops*", "로그이상탐지", "etc") 
+]
+ | eval volume = round(volume/pow(1024,int($("total_volume")) ), 2)
+| timechart span=1d sum(volume) by type
+| eval APM = ceil(APM),  DPM = ceil(DPM),  SMS = ceil(SMS),  etc = ceil(etc),  로그이상탐지 = ceil(로그이상탐지)

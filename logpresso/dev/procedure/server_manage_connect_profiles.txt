@@ -1,0 +1,21 @@
+파라미터 : [string profiles_type]
+설명 : 운영관리>수집기>접속 프로파일
+
+# 접속 프로파일 목록/상세 조회 **
+| # 참조 : z_dash_process_log_view_query
+| confdb docs logpresso connect_profiles
+| rename type as profiles_type
+| eval type_filter = if( in(profiles_type, "ssh", "jdbc"), profiles_type, "etc")
+| search contains(type_filter, lower($("profiles_type", "")))
+| fields guid, name, profiles_type, description, configs
+| rename name as connect_profile_name
+| eval description = if( len(description)==0, null, description), profiles_type = upper(profiles_type)
+| fields guid, profiles_type, description, configs, connect_profile_name
+
+| # [result_fields[
+configs || map || not null
+connect_profile_name || string || not null
+description || string || null
+guid || string || not null
+profiles_type || string || not null
+| # ]result_fields]

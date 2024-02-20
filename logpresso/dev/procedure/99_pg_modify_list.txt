@@ -1,0 +1,21 @@
+파라미터 : [string day]
+설명 : PG에서 변경되는 사항에 대해 변경대상을 조회하고 변환하여 보여주고,
+lu_pg_modify_history 룩업에서 적용 내용을 관리하기
+
+set day = date($("day", now()), "yyyy-MM-dd")
+| lookuptable lu_pg_modify_history
+| eval modify_dt = date(modify_dt, "yyyy-MM-dd")
+| search modify_dt >=  $("day")
+| sort no
+| eval tobe_name = concat( "query_string = replace(query_string, \"", asis_name, "\", \"", tobe_name, "\")"), 
+		asis_name = concat( "contains(query_string, \"", asis_name, "\")") 		
+| stats array(asis_name) as asis, array(tobe_name) as tobe
+| eval asis = concat( "| search ", strjoin("\n\t or ", asis)),
+		tobe = concat( "| eval ", strjoin("\n\t, ", tobe) ),
+       line = concat( "proc 99_scheduled_queries_list()\n
+| eval _object = \"scheduled_query\"\n
+| union [\n
+		proc 99_procedure_list()\n
+		| eval _object = \"procedure\"]\n", asis, "\n
+| eval org_query_string = query_string, _name = nvl(name, title)\n", tobe, "\n
+| fields _name, _object, query_string, org_query_string")

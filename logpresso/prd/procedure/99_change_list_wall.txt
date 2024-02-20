@@ -1,0 +1,25 @@
+파라미터 : [string from]
+설명 : 변경된 대상 조회 (대시보드 상세보기)
+
+proc 99_change_list($("from"))
+| search type == "WallPlugin" | rename name as widget_guid
+| join widget_guid [ 
+    confdb docs logpresso wall
+    | join parent [
+        confdb docs logpresso wall
+        | search isnull(parent)
+        | fields guid, name | rename guid as parent, name as parent_name
+        ]
+    | parsemap overlay=t field=state
+    | fields - state
+    | explode widgets
+    | rename guid as widget_guid
+    | parsemap overlay=t field=widgets | fields - widgets
+    | parsemap overlay=t field=data | fields - data
+    | rename query as widget_query
+    | tojson output=datasource datasource
+    | tojson output=columns columns
+    | tojson output=series series
+    | fields guid, widget_guid, name, type, parent, parent_name, interval, datasource, widget_query, series
+]
+| order guid, widget_guid, name, type, parent, parent_name, interval, datasource, widget_query, series

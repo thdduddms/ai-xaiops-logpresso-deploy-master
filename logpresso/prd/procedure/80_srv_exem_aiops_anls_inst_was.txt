@@ -1,0 +1,56 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+set system_id =$("system_id")
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(dateadd(now(), "min", -1), "1m"))
+
+| table from=$("from") to=$("to") xapm_jvm_stat_summary 
+| eval  _time=datetrunc(_time, "1m")
+| rename
+    jvm_gc_time as gc_time, 
+    jvm_gc_count as gc_count
+| fields _time, system_id, _target, was_id, gc_time, gc_count,time
+| join _time, was_id, system_id [
+    table from=$("from") to=$("to") xapm_was_stat_summary | eval  _time=datetrunc(_time, "1m")
+    | rename 
+        txn_elapse as response_time,
+        jvm_heap_usage as heap_usage, 
+        jvm_cpu_usage as cpu_usage,
+        jvm_thread_count as thread_count, 
+        open_file_count as file_count,
+        open_socket_count as socket_count, 
+        active_txns as active_tx_count,
+        request_rate as call_count, 
+        active_db_sessions as active_db_conn_count,
+        sql_exec_count as sql_count, 
+        sql_elapse as sql_time,
+        sql_prepare_count as prepare_count, 
+        sql_fetch_count as fetch_count,
+        os_cpu as cpu_time 
+    | eval 
+        time = str(_time, "yyyy-MM-dd HH:mm:ss"),
+        tps = floor((sum_txn_end_count/20)/3,4),    
+        fail_count = 0,
+        prepare_time = 0,
+        fetch_time = 0, 
+        extcall_count = 0,
+        extcall_time = 0,
+        cpu_time=floor(cpu_time, 4),
+        cpu_usage=floor(cpu_usage, 4),
+        heap_usage=floor(heap_usage, 4),
+        sql_time=floor(sql_time, 4),
+        response_time = floor(response_time, 4)
+    | fields _time, system_id, _target, was_id, tps, cpu_time, cpu_usage, heap_usage, active_tx_count, thread_count, file_count, socket_count, call_count, fail_count, active_db_conn_count, sql_count, sql_time, prepare_count, prepare_time, fetch_count, fetch_time, extcall_count, extcall_time, response_time, time
+]
+| search system_id== $("system_id")
+| eval was_id = str(was_id), system_id=$("system_id")
+| # 임시. DDS에서 동적 처리 개발 완료 시점에 fields 구문 삭제 필요(23.11.1-이유린)
+| # 1220 영은 fields 구문 주석처리 // 영호님 요청
+| # fields _time, system_id, _target, was_id, tps, cpu_time, cpu_usage, heap_usage, active_tx_count, thread_count, file_count, socket_count, call_count, fail_count, active_db_conn_count, gc_time, gc_count, sql_count, sql_time, prepare_count, prepare_time, fetch_count, fetch_time, extcall_count, extcall_time, response_time, time
+| # [ XAIOps 대상만 필터링 하기
+| eval target_type = nvl(inst_type, "was"),
+	key = concat(system_id, "|", target_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)
+| fields - key, enable  

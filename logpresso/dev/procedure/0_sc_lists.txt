@@ -1,0 +1,12 @@
+파라미터 : []
+설명 : null
+
+wget url="http://10.10.34.21:14568/scheduled" method=get| fields line | parsejson line | fields data
+ | explode data
+| eval toCancel = concat( "proc 0_sc_switch(\"", data, "\",\"false\")")
+| eval toStart = concat( "proc 0_sc_switch(\"", data, "\",\"true\")")
+| join type=left data [ 
+table duration=20m araqne_query_logs | search source == "java-client" and login_name == "ai_collector_dev" and state=="stopped" and contains(query_string, "mart_schedule_proc")
+| rex field=query_string "(?<data>33_sc_[a-z_0-9]*)" | sort limit=1 -eof_at by data | fields eof_at, data ]
+| union 
+[ json "{}" | eval data = "all", eof_at = "모든 예약된 프로시저 끄거나 켜기", toCancel = "proc 0_sc_switch(\"all\", \"false\")", toStart = "proc 0_sc_switch(\"all\", \"true\")"]    

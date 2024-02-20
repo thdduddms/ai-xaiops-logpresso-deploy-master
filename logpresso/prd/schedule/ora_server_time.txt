@@ -1,0 +1,17 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+dbquery maxgauge_222 select server_type, server_id, server_time, logging_time, status, host_ip, CAST(CAST((concat('X', host_ip)) AS bit(32)) AS int) as host_ip_int from public.ora_server_time
+| # server_type : 0-DGServer / 1-?? / 2-DB / 3-?? / 15-??
+| # status : 0-정상, 1-맥스게이지<->수집데몬, 2-수집데몬<->DB인스턴스
+| eval inst_type= case (server_type==1, "was",
+						server_type==2, "db", 
+                        server_type==3, "web"),
+		host_ip_hex = host_ip,
+        host_ip = if( isnotnull(host_ip_hex), str(ip(host_ip_int)), null),
+		status_str = case (status==0 , "CONNECTED",
+                   						status==1 , "DISCONNECTED",
+                   						status==2 , "SERVER_DOWN")
+|#  eval _time = logging_time
+| fields - host_ip_int
+| import ora_server_time

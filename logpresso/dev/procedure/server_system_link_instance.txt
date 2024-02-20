@@ -1,0 +1,35 @@
+파라미터 : [int system_id, string inst_type]
+설명 : 설정 > 시스템 > 시스템 연동 >> 인스턴스&그룹 main / 인스턴스<>호스트(inst_type=null)
+
+# WAS, TP, WEB
+ | # JAVA : was | # WSM : web | # TP, TUX : tp
+| proc server_system_link_instance_APM_intermax()
+| # proc server_system_link_instance_APM_pharos() 
+
+| # DB	
+|  proc server_system_link_instance_DPM_maxgauge_MFO()
+|  proc server_system_link_instance_DPM_maxgauge_MFT()
+
+| eval system_id=$("system_id")
+| search inst_type == nvl($("inst_type"), inst_type) 
+| fields inst_type, target_id, host_name, inst_name, inst_group_name, inst_product_type, inst_info, inst_product_version, inst_solution, desc, database_name, enable, rac_info, biz_name
+
+| sort inst_type, target_id 
+
+
+| # [result_fields[
+biz_name || string	|| null	  	 	 
+database_name ||| string || null	 	 	 
+desc ||	string	|| null	 	 	 
+enable || bool	|| not null	 	 
+host_name || string	|| null	  	 	 
+inst_group_name || string || null	 	 	 
+inst_info || string	|| null	  	 	 
+inst_name || string	|| null	  	 	 
+inst_product_type || string	|| null	 	 	 
+inst_product_version || string	|| null	 	 	 	 
+inst_solution || string	|| not null	 	 
+inst_type || string	|| not null 	  	 	 
+rac_info ||	object	|| null	  	 	 
+target_id || string	|| not null	 	 
+| # ]result_fields]

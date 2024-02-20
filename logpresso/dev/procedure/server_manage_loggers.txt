@@ -1,0 +1,82 @@
+파라미터 : [string logger_name]
+설명 : 운영관리>수집기>수집설정
+
+# 전체 수집설정 목록/상세 조회**
+| confdb docs araqne-log-api logger 
+| union [ 
+	sentry 
+	| fields guid 
+	| sentry-loggers 
+	| sentry-logger-configs
+    | rename guid as namespace
+	| eval fullname = concat(namespace, if(isnull(_error), concat("\\", name), concat(" : ", _error))), 
+			factory_namespace = namespace
+    ]
+| join type=inner fullname [
+		confdb docs logpresso loggers
+        | eval ha_setting = case( isnull(primary_logger) and isnull(backup_logger), "독립 실행형",
+                                                    isnotnull(backup_logger), "프라이머리",
+                                                    isnotnull(primary_logger), "백업")
+        | rename full_name as fullname, host as host_tag
+        | fields fullname, host_tag, table_name, ha_setting
+	]
+| search contains(fullname, $("logger_name", ""))     
+| # guid별 그룹 조회
+| join type=left namespace [
+    confdb docs logpresso-core sentry_groups
+    | rename guid as group
+    | join type=right group [ confdb docs logpresso-core sentries ]
+    | rename name as group_name, guid as namespace
+    | fields group_name, namespace
+    | union [ json "{}" | eval namespace = "local", group_name = "로컬" ]
+]
+| fields - doc_id, doc_prev, doc_rev, version
+| # 수집기 상태 정보 조회
+| join type=left +fullname [
+    system loggers
+    | eval fullname = concat(namespace, "\\", name)
+    | fields fullname, status, interval, cron_schedule, log_count, drop_count, log_volume, drop_volume, last_start_at, last_run_at, last_log_at, last_write_at, failure
+]
+| eval stop_reason = nvl(stop_reason, nvl(_error, failure)),
+		last_log_at = str(last_log_at, "yyyy-MM-dd HH:mm:ss"),
+		last_run_at = str(last_run_at, "yyyy-MM-dd HH:mm:ss"),
+		last_start_at = str(last_start_at, "yyyy-MM-dd HH:mm:ss"),
+		last_write_at = str(last_write_at, "yyyy-MM-dd HH:mm:ss"),
+		start_time = str(start_time, "yyyy-MM-dd HH:mm:ss"),
+		end_time = str(end_time, "yyyy-MM-dd HH:mm:ss"),
+        enabled = if(status == "running", true, false)
+| fields configs, cron_schedule, description, drop_count, drop_volume, enabled, end_time, factory_name, factory_namespace, failure, fullname, group_name, ha_setting, host_tag, interval, is_pending, is_running, last_log_at, last_run_at, last_start_at, last_write_at, log_count, log_volume, manual_start, name, namespace, start_time, status, stop_reason, table_name, transformer
+
+| # [result_fields[
+configs || map || not null
+cron_schedule || object || null
+description || object || null
+drop_count || long || not null
+drop_volume || long || not null
+enabled || bool || not null
+end_time || object || null
+factory_name || string || not null
+factory_namespace || string || not null
+failure || object || null
+fullname || string || not null
+group_name || string || null
+ha_setting || string || null
+host_tag || string || null
+interval || int || not null
+is_pending || bool || null
+is_running || bool || null
+last_log_at || string || null
+last_run_at || object || null
+last_start_at || string || null
+last_write_at || string || null
+log_count || long || not null
+log_volume || long || not null
+manual_start || bool || null
+name || string || not null
+namespace || string || not null
+start_time || object || null
+status || string || not null
+stop_reason || object || null
+table_name || string || null
+transformer || string || null
+| # ]result_fields]

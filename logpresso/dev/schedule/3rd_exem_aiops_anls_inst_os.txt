@@ -1,0 +1,91 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+setq [ table duration=10m 3rd_exem_aiops_anls_inst_os
+        | stats max(_time) as last_time
+        | eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+        | fields last_time ]
+| set from=datetrunc( dateadd(now(), "min", -3), "1m")
+| set to = datetrunc( dateadd(now(), "min", -2), "1m" )
+| table from=$("from") to=$("to") 3rd_os_dl
+| search _time > $("last_time")
+| rename 
+		_host as host_name, 
+        idle as cpu_idle, 
+        kernel as cpu_system, 
+        user as cpu_user, 
+        pfree as phy_free, 
+        ptotal as phy_total, 
+        swaptotal as swap_total, 
+        swapfree as swap_free, 
+        max_usage as disk_usage
+|# string -> double로 변경하는 과정
+| eval
+		cpu_idle = double(cpu_idle),
+        cpu_system = double(cpu_system),
+        cpu_user = double(cpu_user),
+        disk_usage = double(disk_usage),
+        free = double(free),
+        interval = double(interval),
+        phy_free = double(phy_free),
+        phy_total = double(phy_total),
+        rx_bytes_delta = double(rx_bytes_delta),
+        rx_discards_delta = double(rx_discards_delta),
+        rx_errors_delta = double(rx_errors_delta),
+        rx_pkts_delta = double(rx_pkts_delta),
+        tx_bytes_delta = double(tx_bytes_delta),
+        tx_discards_delta = double(tx_discards_delta),
+        tx_errors_delta = double(tx_errors_delta),
+        tx_pkts_delta = double(tx_pkts_delta),
+        total = double(total),
+        usage = double(usage),
+        used = double(used),
+        swap_total = double(swap_total),
+        swap_free = double(swap_free)
+| eval 
+		_time = datetrunc(_time, "1m"), 
+        system_id = 102,
+        _target = host_name, 
+        convert = pow(1024,2), 
+        phy_free = floor(phy_free/convert,0), 
+        phy_total = floor(phy_total/convert,0),
+        swap_total = floor(swap_total / convert, 0),
+        swap_free = floor(swap_free / convert, 0),
+		cpu_usage = cpu_system + cpu_user, 
+        memory_usage = ((phy_total - phy_free) / phy_total) * 100, 
+        memory_used = phy_total - phy_free, 
+		rx_bytes_delta = if(rx_bytes_delta < 0 , 0, rx_bytes_delta), 
+        tx_bytes_delta = if(tx_bytes_delta < 0 , 0, tx_bytes_delta),
+		network = rx_bytes_delta + tx_bytes_delta, 
+        swap_used = swap_total - swap_free
+| stats 
+		avg(cpu_usage) as cpu_usage, 
+        max(cpu_usage) as cpu_usage_max, 
+        avg(cpu_idle) as cpu_idle, 
+        avg(cpu_user) as cpu_user, 
+        avg(cpu_system) as cpu_system,
+        avg(memory_used) as memory_used,
+        avg(memory_usage) as memory_usage,
+		avg(phy_free) as phy_free,
+        avg(phy_total) as phy_total,
+        avg(swap_total) as swap_total, 
+        avg(swap_free) as swap_free,
+        avg(swap_used) as swap_used, 
+        max(disk_usage) as disk_usage, 
+        avg(rx_bytes_delta) as rx_bytes_delta, 
+        avg(rx_discards_delta) as rx_discards_delta,
+		avg(rx_errors_delta) as rx_errors_delta, 
+        avg(rx_pkts_delta) as rx_pkts_delta,
+        avg(tx_bytes_delta) as tx_bytes_delta, 
+        avg(tx_discards_delta) as tx_discards_delta,
+		avg(tx_errors_delta) as tx_errors_delta, 
+        avg(tx_pkts_delta) as tx_pkts_delta, 
+        avg(network) as network by _time, host_name, system_id, _target
+| eval 
+		time = _time, 
+        disk=disk_usage
+| fields 
+		_time, host_name, system_id, _target, cpu_idle, cpu_system, cpu_usage, cpu_usage_max, cpu_user, memory_used, 
+        memory_usage, phy_free, phy_total, swap_total, swap_free, swap_used, disk_usage,  disk, rx_bytes_delta, rx_discards_delta, 
+        rx_errors_delta, rx_pkts_delta, tx_bytes_delta, tx_discards_delta, tx_errors_delta, tx_pkts_delta, network, time
+| import 3rd_exem_aiops_anls_inst_os

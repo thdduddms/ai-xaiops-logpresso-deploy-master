@@ -1,0 +1,52 @@
+파라미터 : []
+설명 : 설정 > 시스템 > 시스템 연동 >> 인프라 sub (SMS-ontune)
+
+dbquery ontune_63
+  select concat(63, '_', h."_agentid") as guid,
+      h."_hostname" as host_name,
+      "allip" as remote_ip,
+      "_os" as _os,
+      a."_connected" as enable,
+      a."_group"
+  from hostinfo h join agentinfo a 
+      on h."_agentid" = a."_agentid"
+| union [dbquery ontune_99
+  select
+   concat(99, '_', h."_agentid") as guid,
+      h."_hostname" as host_name,
+      "allip" as remote_ip,
+      "_os" as _os,
+      a."_connected" as enable,
+      a."_group"
+  from hostinfo h join agentinfo a 
+      on h."_agentid" = a."_agentid"]
+| eval
+	os = case( in(_os, "*Linux*"), "Linux",in(_os, "*Windows*"), "Windows", 
+						in(_os, "*AIX*"), "AIX", in(_os, "*HP-UX*"), "HP-UX",  in(_os, "*CentOS*"), 
+                        "CentOS")
+	arch = null,
+	is_virtual = false,
+	os_ver=_os,
+	is_connected = enable==1
+	
+| search in(_group, "", "*개발*", "*테스트*", "*검증*", "*DR*", "*임시*") ==false
+		and in(name, "*개발*", "*테스트*", "*검증*", "*DR*", "*임시*") ==false
+
+| rename guid as target_id, remote_ip as addr, is_connected as enable, arch as cpu_type, os as os_info, os_ver as os_version
+ | eval	 target_id = string(target_id), 
+			host_name = if(len(host_name)==0, null, host_name),			
+			inst_type="os"
+| fields inst_type, target_id, host_name, name, addr, cpu_type, os_info, os_version, enable, is_virtual
+
+| # [result_fields[
+addr || string ||  	null 
+cpu_type || string	|| not null	 	 	 	 
+enable || bool || not null	 	 	 
+host_name || string	|| not null 	 	 
+is_virtual || bool	|| not null	 	 
+name || string || null	 	 	 
+os_info || string	|| not null	 	 	 
+os_version || string || not null	 	 	 
+target_id || string	|| not null
+inst_type || string || not null
+| # ]result_fields]

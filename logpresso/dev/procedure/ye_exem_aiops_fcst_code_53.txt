@@ -1,0 +1,107 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 인터맥스 5.3 거래코드 데이터
+** code (service) dds 필수값 : _time, _target, guid
+
+set system_id =$("system_id")
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set from_guid=nvl($("from_date"), datetrunc(dateadd(now(), "min", -2), "1m"))
+| set to=nvl($("to_date"), datetrunc(dateadd(now(), "min", -1), "1m"))
+
+| table from=$("from") to=$("to") xapm_txn_detail
+| search _host=="102.14*" and first==1 
+| eval 
+	_time = datetrunc(_time, "1m"), 
+    tid=string(tid), 
+    system_id=102,
+    txn_elapse = txn_elapse-remote_elapse
+| rename 
+	tid as top_tid, 
+    txn_id as top_txn_id
+
+| eval	tx_code_name = case(tx_code == "2", "계좌 개설",
+    							tx_code == "3", "계좌 입금",
+                                tx_code == "4", "계좌 출금",
+                                tx_code == "5", "대내 이체",
+                                tx_code == "6", "계좌 조회",
+                                tx_code == "7", "대외 이체",
+                                tx_code == "8", "카드 생성",
+                                tx_code == "9", "카드 결제",
+                                tx_code == "10", "고객 등록", tx_code_name),
+txn_name = case(top_txn_id == "A68CF9F8627213DA3882FBE601BD9DC298448C11", "/EXEMBank1.2/loadcreate",
+    							top_txn_id == "A1EF2A9D1437366A3ACE128A5275D07355BC3EED", "/EXEMBank1.2/loaddeposit",
+                                top_txn_id == "45CE9B78C0FE38BC25FC4F8F5764437668FB8605", "/EXEMBank1.2/loadwithdraw",
+                                top_txn_id == "6824031E7F8E44607319504EBF5883DF93734165", "/EXEMBank1.2/loadtransfer",
+                                top_txn_id == "7A6D8E5A16360B98DA38C5B601A85254F4AA7E0F", "/EXEMBank1.2/loadread",
+                                top_txn_id == "5B5B58946C3515464D51797A39996FC7D09F564F", "/EXEMBank1.2/mci-fep",
+                                top_txn_id == "2BC3B90554D08E20079A1482D0A42F97D67DA255", "/EXEMBank1.2/mci-eai",
+                                top_txn_id == "54933FDEB2B173AE7587500340F083ECE390DA8D", "/ExternalBank/pay-transcard",
+                                top_txn_id == "40E70F8AF6ABD604F8BF0862F1379A3A839CD3F7", "/EXEMBank1.2/createuser", txn_name),
+| search isnotnull(guid) and isnotnull(tx_code)
+| fields _time, top_tid, was_id, top_txn_id, tx_code, txn_elapse, txn_name, tx_code_name, exception, system_id
+
+| join type=left _time, top_tid 
+		[ table from=$("from") to=$("to") xapm_etoe_data_value    
+        | eval 
+						tier_elapse = tier_elapse/1000, 
+						tier_remote_elapse = tier_remote_elapse/1000, 
+						_time=datetrunc(_time, "1m"), 
+						top_tid=string(top_tid),
+                        tier_id = concat("0",string(tier_id))
+        | eval 
+						tier_elapse = tier_elapse-tier_remote_elapse
+        | fields _time, top_tid, tier_elapse, tier_id, tier_elapse, tier_remote_elapse, tid_count ] 
+| rename 
+	tid_count as exec_count, 
+    tier_elapse as elapse, 
+    tier_id as e2e_code 
+	
+| fields _time, system_id, top_tid, top_txn_id, elapse, exec_count, exception, was_id,  tx_code, tx_code_name, e2e_code, txn_elapse, txn_name
+| search isnotnull(e2e_code)
+
+| pivot sum(elapse) as sum, max(elapse) as max, sum(exec_count) as exec_count, sum(exception) as error
+			by _time, system_id, top_tid,top_txn_id,was_id, tx_code, tx_code_name, txn_elapse, txn_name for e2e_code
+            
+| # was_id=3701 이상함
+| search was_id!=3701
+
+| rename 
+	sum:06 as elapse06_sum, sum:07 as elapse07_sum, sum:08 as elapse08_sum,
+    max:06 as elapse06_max, max:07 as elapse07_max, max:08 as elapse08_max,
+    exec_count:06 as exec06_count, exec_count:07 as exec07_count, exec_count:08 as exec08_count,
+	error:06 as error06_count, error:07 as error07_count, error:08 as error08_count
+
+| eval 
+	error_count = nvl(error06_count, 0) + nvl(error07_count, 0) + nvl(error08_count, 0),
+	exec_count = nvl(exec06_count, 0) + nvl(exec07_count, 0) + nvl(exec08_count, 0)
+	
+	
+| stats 
+	avg(elapse06_sum) as elapse06_avg, avg(elapse07_sum) as elapse07_avg, avg(elapse08_sum) as elapse08_avg, 
+    max(elapse06_max) as elapse06_max, max(elapse07_max) as elapse07_max, max(elapse08_max) as elapse08_max,
+    sum(txn_elapse) as total_elapse_time, 
+	avg(txn_elapse) as elapse_avg, 
+    max(txn_elapse) as elapse_max, 
+    sum(error_count) as error_count,
+	count as node_count
+    by _time, system_id, top_tid, top_txn_id, tx_code, tx_code_name, txn_name
+
+| rename top_txn_id as txn_id, top_tid as guid
+
+
+| eval
+	time=string(_time, "yyyy-MM-dd HH:mm:ss"),
+    node_count = long(nvl(node_count, 0)),
+	exec_count = long(nvl(exec_count, 0)),
+	error_count = long(nvl(error_count, 0)),
+    elapse_avg = nvl(floor(elapse_avg,1), 0),
+    elapse_max =  long(nvl(elapse_max, 0)),
+    total_elapse_time = long(total_elapse_time),
+    elapse06_avg=nvl(floor(elapse06_avg,1), 0),
+    elapse07_avg=nvl(floor(elapse07_avg,1), 0),
+    elapse08_avg=nvl(floor(elapse08_avg,1), 0),
+    elapse06_max=nvl(floor(elapse06_max,1), 0),
+    elapse07_max=nvl(floor(elapse07_max,1), 0),
+    elapse08_max=nvl(floor(elapse08_max,1), 0),
+    _target=tx_code,
+    txn_id_info = concat(txn_id, "$$", txn_name),
+    txn_name=nvl(txn_name, "null")

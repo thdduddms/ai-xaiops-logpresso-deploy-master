@@ -1,0 +1,55 @@
+파라미터 : [int system_id, string log_id, string from_yMdHmS, int standard_line_no, int before_from_yMdHm, int after_from_yMdHm, int limit_cnt]
+설명 : 공통 > 로그 이전, 이후 보기
+
+# 로그 > 원본 메세지 보기 (항상 기준 line_no 데이터 포함됨) **
+| set from_yMdHmS = date($("from_yMdHmS"), "yyyyMMddHHmmssSSS")
+| set to_ms = dateadd($("from_yMdHmS"), "sec", 1)
+| set before_from = dateadd($("from_yMdHmS"), "min", $("before_from_yMdHm", 3)*-1)
+| set before_to = dateadd($("from_yMdHmS"), "sec", 1)
+| set after_from = $("from_yMdHmS")
+| set after_to = dateadd(dateadd($("from_yMdHmS"), "min", $("after_from_yMdHm", 3)), "sec", 1)
+| set limit_cnt = $("limit_cnt", 1000)
+
+| # 기준 후 로그
+| table order=asc from=$("after_from") to=$("after_to") exem_aiops_anls_log
+|  search isnotnull($("after_from_yMdHm"))
+      and system_id == $("system_id") and _target == $("log_id")
+		and case( datepart(_time, "day") == datepart($("from_yMdHmS"), "day"), _id>$("standard_line_no"),
+                datepart(_time, "day") >  datepart($("from_yMdHmS"), "day"), true )
+
+
+| sort limit=$("limit_cnt") time
+| eval part = "3.after"
+
+| # 이상탐지 기준 시점 로그
+| union [
+	table order=desc from=$("from_yMdHmS") to=$("to_ms") exem_aiops_anls_log
+	| search system_id == $("system_id") and _target == $("log_id")
+	     and if( datepart(_time, "day")==datepart($("from_yMdHmS"), "day"), _id==$("standard_line_no"), false )
+	| eval part = "2.now"
+] 
+
+| # 기준 전 로그
+| union [
+    table order=desc from=$("before_from") to=$("before_to") exem_aiops_anls_log
+    | search isnotnull($("before_from_yMdHm"))
+         and system_id == $("system_id") and _target == $("log_id")
+         and case( datepart(_time, "day") == datepart($("from_yMdHmS"), "day"), _id<$("standard_line_no"),
+                   datepart(_time, "day") <  datepart($("from_yMdHmS"), "day"), true )
+    | sort limit=$("limit_cnt") -time
+    | sort time
+    | eval part = "1.before"
+]
+| rename _id as line_no
+| fields time, line_no, part, msg
+| sort time, line_no
+| order time, line_no, part, msg
+]
+
+
+| # [result_fields[
+line_no || long || not null
+msg || string || not null
+part || string || not null
+time || string || not null
+| # ]result_fields]

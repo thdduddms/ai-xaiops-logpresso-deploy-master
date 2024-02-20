@@ -1,0 +1,73 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+set system_id =$("system_id")
+| set inst_product_type = "TIBERO"
+
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(now(), "1m"))
+| table from=$("from") to=$("to") ora_db_stat_tibero
+| eval name=stat_name,  value= avg_value, stat_type = "db_stat"
+| fields _time, name, value, db_id, system_id, stat_type
+| union [ table from=$("from") to=$("to")  ora_db_wait_tibero
+         | eval name=event_name, value=avg_wait_time, stat_type = "db_wait" 
+         | fields _time, name, value, db_id, system_id, stat_type ]
+| eval join_metric = name 
+| join type=left join_metric, stat_type [
+        lookuptable lu_stat_metric_info
+      | eval name = concat( "metric_by_", lower($("inst_product_type")))
+      | eval join_metric = field(name)
+      | search isnotnull(join_metric)
+      | fields metric_id, stat_type, join_metric ] 
+| search isnotnull(metric_id) and system_id == $("system_id")
+| pivot sum(value) as value by _time, db_id, system_id for metric_id 
+| eval
+    time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+    db_id = string(db_id),
+     _target = db_id,
+    solution="maxgauge",
+    inst_product_type=$("inst_product_type"),
+       system_id=$("system_id")
+
+| # 티베로 stat, wait 지표들은 이벤트성 지표이기 때문에 null=0으로 판단
+| eval
+	db_cpu = nvl(db_cpu, 0),
+	execute_count = nvl(execute_count, 0),
+	hard_parse_elapsed_time = nvl(hard_parse_elapsed_time, 0),
+	lock_waiting_sessions = nvl(lock_waiting_sessions, 0),
+	parse_count_total = nvl(parse_count_total, 0),
+	parse_time_elapsed = nvl(parse_time_elapsed, 0),
+	physical_reads = nvl(physical_reads, 0),
+	redo_entries = nvl(redo_entries, 0),
+	redo_log_size = nvl(redo_log_size, 0),
+	running_sessions = nvl(running_sessions, 0),
+	sort_time = nvl(sort_time, 0),
+	sorts_disk = nvl(sorts_disk, 0),
+	sorts_memory = nvl(sorts_memory, 0),
+	transactions = nvl(transactions, 0),
+	user_calls = nvl(user_calls, 0),
+	user_rollbacks = nvl(user_rollbacks, 0),
+	we_buf_wait = nvl(we_buf_wait, 0),
+	we_jc_buf_disk_read = nvl(we_jc_buf_disk_read, 0),
+	we_jc_buf_disk_readm = nvl(we_jc_buf_disk_readm, 0),
+	we_jc_dbwr_write_os = nvl(we_jc_dbwr_write_os, 0),
+	we_log_flush_commit = nvl(we_log_flush_commit, 0),
+	we_log_flush_space = nvl(we_log_flush_space, 0),
+	we_spin_alloc_lru = nvl(we_spin_alloc_lru, 0),
+	we_spin_buf_bucket = nvl(we_spin_buf_bucket, 0),
+	we_spin_buf_ws = nvl(we_spin_buf_ws, 0),
+	we_wlock_tx = nvl(we_wlock_tx, 0)
+
+
+| # fields _target, _time, db_cpu, db_id, execute_count, hard_parse_elapsed_time, inst_product_type, 
+lock_waiting_sessions, parse_count_total, parse_time_elapsed, physical_reads, redo_entries, 
+redo_log_size, running_sessions, session_logical_reads, solution, sort_time, sorts_disk, 
+sorts_memory, system_id, transactions, user_calls, user_rollbacks, we_buf_wait, 
+we_jc_buf_disk_read, we_jc_buf_disk_readm, we_jc_dbwr_write_os, we_log_flush_commit       
+| # [ XAIOps 대상만 필터링 하기
+| eval _target = db_id
+| eval target_type = nvl(inst_type, "db"),
+	key = concat(system_id, "|", target_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)    
+| fields - key, enable 

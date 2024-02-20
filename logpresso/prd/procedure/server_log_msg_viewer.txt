@@ -1,0 +1,23 @@
+파라미터 : [int system_id, string log_id, string from_yMdHm, string to_yMdHm, string line_numbers, int limit_cnt]
+설명 : 공통 > 로그 모아 보기
+
+# 로그 > 원본 메세지 모두 보기 (line_no - 전체 또는 복수 선택 가능) **
+| set flag_line_no = isnull( $("line_numbers") )
+| table order=asc from=$("from_yMdHm") to=$("to_yMdHm") exem_aiops_anls_log
+| search system_id == $("system_id") and _target == $("log_id")
+| join type=left _id [ 
+	json "{}" 
+    | eval _id = split($("line_numbers"), ",")
+    | explode _id 
+    | eval _id = long(_id), flag_line_no = true
+]
+| search nvl(flag_line_no, $("flag_line_no"))
+| rename _id as line_no
+| fields time, line_no, msg
+| sort limit=$("limit_cnt", 1000000000) time, line_no
+
+| # [result_fields[
+line_no || long || not null
+msg || string || not null
+time || string || not null
+| # ]result_fields]

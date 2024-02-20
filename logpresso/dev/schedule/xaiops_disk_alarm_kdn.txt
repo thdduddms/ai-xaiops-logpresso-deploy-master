@@ -1,0 +1,15 @@
+실행 주기 : 0 * * * *
+경보 사용 : bypass
+
+# KDN용 디스크 고갈 경보 알람 SMS 발송 연동 기능
+| # sms DB에 dboutput 기능은 추가될 예정
+| set disk_usage_limit_per=60
+| table duration=3m sentry_disk_all_partitions_1m_resource
+| search path!="/mnt*" and path!="/iso/*" and path!="/hpe/os" and path!="/run*" and path!="/snap*"
+| search disk_usage>=$("disk_usage_limit_per")
+| rename target_id as guid 
+| join type=left guid [ sentry | fields guid, remote_ip ]
+| # eval remote_ip = if(guid=="ai-logpresso", "10.10.31.223", remote_ip)
+| # import xaiops_disk_alarm_logs
+| eval 경보_메세지 = concat( guid, " (", remote_ip, ") 서버의 '", path, "' 파티션이 디스크 고갈 기준(",$("disk_usage_limit_per"), "%)을 초과하였습니다. 디스크 정리가 필요합니다.")
+| fields 경보_메세지

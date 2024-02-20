@@ -1,0 +1,44 @@
+파라미터 : [int system_id, string table, string target_field, string target_ids, string metric, string term, string func_stat, string from, string to]
+설명 : 통계 & 내역 > 수집 데이터 차트 >> 대상별 메트릭 차트(결과출력)
+
+# 데이터 분석을 위해 선택한 테이블, 타겟, 지표를 차트로 표현 **
+| # [ set from=202205311400 | set to=202205311415 | set table="exem_aiops_anls_inst_os" | set system_id=102 | set target_field="_target" | set target_ids="ebmciapos01,dev_115" | set metric="disk_usage" | set term="2m" | set func_stat = "sum" ]
+| table from=$("from") to=$("to") parallel=t $("table")
+| search if(isnotnull(system_id), system_id==$("system_id"), true)
+| eval target = string(field($("target_field"))), value = field($("metric")), _time = datetrunc(_time, "1m")
+| join type=right _time, target [ 
+    json "{}" | eval target = split($("target_ids"), ",") 
+    | eval _time = daterange(date($("from"), "yyyyMMddHHmm"), date($("to"), "yyyyMMddHHmm") , "1m") 
+    | explode target 
+    | eval _table = $("table")
+    | lookup lu_data_chart_table _table output inst_type as lu_inst_type
+    | eval inst_type = if(lu_inst_type=="instance", inst_type, lu_inst_type), inst_type = split(inst_type, ",")
+    | explode inst_type
+    | join type=left target, inst_type [ 
+        dbquery ai_server select sys_id, 'code' as inst_type, tx_code as target, tx_code_name as name from xaiops_service
+        where sys_id = :system_id
+        union
+        select sys_id, inst_type, target_id as target, name from xaiops_instance
+        where sys_id = :system_id
+        union
+        select sys_id, 'os' as inst_type, target_id as target, name from xaiops_host
+        where sys_id = :system_id 
+    	| rename name as target_name
+        ]
+    | search isnotnull(target_name)    
+    | eval seq = seq() 
+    | explode _time 
+    ]
+| eval _time = str(datetrunc(_time, $("term")), "yyyy-MM-dd HH:mm:ss")
+| stats count as metric_count, sum(value) as metric_sum, avg(value) as metric_avg, min(value) as metric_min, max(value) as metric_max, stddev(value) as metric_stddev, dc(value) as metric_dc by _time, target, target_name, seq
+| eval value = field( concat( "metric_", $("func_stat", "avg")) ), metric = $("metric")
+| search isnotnull(value)
+| fields _time, metric, value, target, target_name
+
+| # [result_fields[
+_time || string || not null
+metric || string || not null
+target || string || not null
+target_name || string || not null
+value || double || not null
+| # ]result_fields]

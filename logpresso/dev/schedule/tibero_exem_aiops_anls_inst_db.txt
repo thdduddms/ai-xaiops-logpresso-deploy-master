@@ -1,0 +1,96 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+setq [table duration=10m exem_aiops_anls_inst_db 
+      | stats max(_time) as last_time 
+      | eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+      | fields last_time ] 
+| set from=datetrunc(dateadd(now(), "min", -8), "1m")
+| set to=datetrunc(dateadd(now(), "min", -4), "1m")
+| table from=$("from") to=$("to") tibero_ora_db_stat
+| search in(stat_name, "the number of user commits performed", "user rollbacks", "user calls", "recursive transactions", "session logical reads", "DB CPU", 
+"DB CPU time", "multi block read wait time", "non-idle wait time", "db block gets", "consistent block gets", "physical reads", "physical reads direct",
+"block changes - current + consistent", "dbwr writes", "physical writes direct", "redo log size", "req service time", "current block gets - wait time", "parse time elapse", 
+"execute count", "global enqueue gets sync", "global enqueue gets async", "Number of CR blocks served for other instances", "current block gets", 
+"running sessions", "total sessions") and _time > $("last_time")
+| eval name=stat_name,  value= avg_value , _time = datetrunc(_time, "1m")
+| fields _time, name, value, db_id, system_id
+| union [table from=$("from") to=$("to") tibero_ora_db_wait
+         | search in(event_name, "WE_BUF_FREE", "WE_BUF_WAIT", "WE_LOG_FLUSH_SPACE", "WE_LOG_FLUSH_COMMIT", "WE_JC_BUF_DISK_READ", 
+"WE_JC_BUF_DISK_READM","gc cr request", "row cache lock", "library cache lock") and _time > $("last_time") 
+         | eval name=event_name, value=avg_wait_time ,_time = datetrunc(_time, "1m")
+         | fields _time, name, value, db_id, system_id]
+| eval name=lower(replace(replace (name, " ", "_"), "-", "_"))
+| pivot sum(value) as value by _time, db_id, system_id for name
+| rename 
+	running_sessions as active_sessions,
+    the_number_of_user_commits_performed as user_commits,
+    recursive_transactions as recursive_calls,
+    db_cpu as CPU_used_by_this_session,
+    db_cpu_time as db_time,
+    multi_block_read_wait_time as concurrency_wait_time,
+    consistent_block_gets as consistent_gets,
+    block_changes___current_+_consistent as db_block_changes,
+    dbwr_writes as physical_writes,
+    redo_log_size as redo_size,
+    req_service_time as file_io_service_time,
+    current_block_gets_-_wait_time as file_io_wait_time,
+    parse_time_elapse as parse_time_elapsed,
+    Number_of_CR_blocks_served_for_other_instances as gc_cr_blocks_received,
+    current_block_gets as gc_current_blocks_received,
+    running_sessions as active_sessions,
+    we_buf_free as free_buffer_waits,
+    we_buf_wait as buffer_busy_waits,
+    we_log_flush_space as log_buffer_space,
+    we_jc_buf_disk_read as db_file_sequential_read,
+    we_jc_buf_disk_readm as db_file_scattered_read
+| eval
+    time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+    db_id = string(db_id),
+    active_sessions = nvl(active_sessions, 0),
+    total_sessions = nvl(total_sessions, 0),
+    buffer_busy_waits = nvl(buffer_busy_waits, 0),
+    concurrency_wait_time = nvl(concurrency_wait_time, 0),
+    consistent_gets = nvl(consistent_gets, 0),
+    cpu_used_by_this_session = nvl(cpu_used_by_this_session, 0),
+    db_block_changes = nvl(db_block_changes, 0),
+    db_block_gets = nvl(db_block_gets, 0),
+    db_file_scattered_read = nvl(db_file_scattered_read, 0),
+    db_file_sequential_read = nvl(db_file_sequential_read, 0),
+    db_time = nvl(db_time, 0),
+    execute_count = nvl(execute_count, 0),
+    file_io_service_time = nvl(file_io_service_time, 0),
+    file_io_wait_time = nvl(file_io_wait_time, 0),
+    free_buffer_waits = nvl(free_buffer_waits, 0),
+    gc_cr_blocks_received = nvl(gc_cr_blocks_received, 0),
+    gc_cr_request = nvl(gc_cr_request, 0),
+    gc_current_blocks_received = nvl(gc_current_blocks_received, 0),
+    global_enqueue_gets_async = nvl(global_enqueue_gets_async, 0),
+    global_enqueue_gets_sync = nvl(global_enqueue_gets_sync, 0),
+    library_cache_lock = nvl(library_cache_lock, 0),
+    lock_waiting_sessions = nvl(lock_waiting_sessions, 0),
+    log_buffer_space = nvl(log_buffer_space, 0),
+    log_file_sync = nvl(log_file_sync, 0),
+    non_idle_wait_time = nvl(non_idle_wait_time, 0),
+    parse_time_elapsed = nvl(parse_time_elapsed, 0),
+    physical_reads = nvl(physical_reads, 0),
+    physical_reads_direct = nvl(physical_reads_direct, 0),
+    physical_writes = nvl(physical_writes, 0),
+    physical_writes_direct = nvl(physical_writes_direct, 0),
+    recursive_calls = nvl(recursive_calls, 0),
+    redo_size = nvl(redo_size, 0),
+    row_cache_lock = nvl(row_cache_lock, 0),
+    session_logical_reads = nvl(session_logical_reads, 0),
+    user_calls = nvl(user_calls, 0),
+    user_commits = nvl(user_commits, 0),
+    user_rollbacks = nvl(user_rollbacks, 0),
+    lock_waiting_sessions=total_sessions-active_sessions,
+    _target = db_id,
+    solution="tibero"
+| fields _time, system_id, _target, db_id, active_sessions, buffer_busy_waits, concurrency_wait_time, consistent_gets, cpu_used_by_this_session, 
+db_block_changes, db_block_gets, db_file_scattered_read, db_file_sequential_read, db_time, execute_count, file_io_service_time,
+ file_io_wait_time,free_buffer_waits, gc_cr_blocks_received, gc_cr_request, gc_current_blocks_received, global_enqueue_gets_async, 
+global_enqueue_gets_sync, library_cache_lock, lock_waiting_sessions, log_buffer_space, log_file_sync, non_idle_wait_time, 
+parse_time_elapsed, physical_reads, physical_reads_direct, physical_writes, physical_writes_direct, recursive_calls,
+ redo_size, row_cache_lock, session_logical_reads, user_calls, user_commits, user_rollbacks, time,solution
+| import exem_aiops_anls_inst_db

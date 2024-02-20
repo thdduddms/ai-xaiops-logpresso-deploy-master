@@ -1,0 +1,34 @@
+파라미터 : [int system_id, string inst_type]
+설명 : 설정 > 시스템 > 시스템 연동 >> 네트워크 main
+
+lookuptable lu_xaiops_network
+| eval system_id=$("system_id"), inst_type="network" 
+| search inst_type == nvl($("inst_type"), inst_type)  
+| rename network_dev_ip as ip_addr
+| fields - system_id, inst_type
+| sort target_id
+
+| # 샘플1 [ set from= $("from")
+| set to = dateadd( date($("to"), "yyyyMMdd"), "day", 1)
+| table from=$("from") to=$("to") exem_aiops_anls_inst_network
+    | sort limit=1 _target by network_id
+ | rename 
+_target as target_id,
+user_dev_name as network_name,
+dev_ip as network_dev_ip
+| fields target_id, system_id, network_name, network_dev_ip, description ]
+
+| # 샘플2 [ table from=$("from") to=$("to") exem_aiops_anls_inst_network
+| eval _time=datetrunc(_time,"1m"), time=str(_time,"yyyy-MM-dd HH:mm:ss")
+| search system_id=="2"
+| stats count by _target,   dev_ip,   network_id, system_id, user_dev_name
+|  fields  _target,   dev_ip,   network_id, system_id, user_dev_name ]
+
+
+| # [result_fields[
+collect_type || string || not null
+desc || string || not null
+ip_addr || string || not null
+network_name || string || not null
+target_id || string || not null
+| # ]result_fields]

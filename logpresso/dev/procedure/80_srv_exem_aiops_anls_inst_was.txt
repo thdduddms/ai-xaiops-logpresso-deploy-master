@@ -1,0 +1,70 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+set system_id =$("system_id")
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(dateadd(now(), "min", -1), "1m"))
+
+| table from=$("from") to=$("to") xapm_jvm_stat_summary | eval _time=datetrunc(_time, "1m")
+| rename
+    jvm_gc_time as gc_time, 
+    jvm_gc_count as gc_count
+| fields _time, system_id, _target, was_id, gc_time, gc_count
+| join _time, was_id, system_id [
+    table from=$("from") to=$("to") xapm_was_stat_summary | eval _time=datetrunc(_time, "1m")
+    | rename 
+        txn_elapse as response_time,
+        jvm_heap_usage as heap_usage, 
+        jvm_cpu_usage as cpu_usage,
+        jvm_thread_count as thread_count, 
+        open_file_count as file_count,
+        open_socket_count as socket_count, 
+        active_txns as active_tx_count,
+        request_rate as call_count, 
+        active_db_sessions as active_db_conn_count,
+        sql_exec_count as sql_count, 
+        sql_elapse as sql_time,
+        sql_prepare_count as prepare_count, 
+        sql_fetch_count as fetch_count,
+        os_cpu as cpu_time 
+    | eval 
+        time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+        tps = floor((sum_txn_end_count/20)/3,4),    
+        fail_count = 0,
+        prepare_time = 0,
+        fetch_time = 0, 
+        extcall_count = 0,
+        extcall_time = 0,
+        cpu_time=floor(cpu_time, 4),
+        cpu_usage=floor(cpu_usage, 4),
+        heap_usage=floor(heap_usage, 4),
+        sql_time=floor(sql_time, 4),
+        response_time = floor(response_time, 4)
+    | fields _time, system_id, _target, was_id, tps, cpu_time, cpu_usage, heap_usage, active_tx_count, thread_count, file_count, socket_count, call_count, fail_count, active_db_conn_count, sql_count, sql_time, prepare_count, prepare_time, fetch_count, fetch_time, extcall_count, extcall_time, response_time, time
+]
+| search system_id== $("system_id")
+| eval was_id = str(was_id), system_id=$("system_id")
+
+| # 0214 was 지표명 rename query
+| # [
+| table from=$("from") to=$("to") xapm_jvm_stat_summary 
+| eval 
+	_time=datetrunc(_time, "1m")
+| fields _time, system_id, _target, was_id, jvm_gc_time, jvm_gc_count
+| join _time, was_id, system_id [
+    table from=$("from") to=$("to") xapm_was_stat_summary 
+    | eval _time=datetrunc(_time, "1m")
+    | eval 
+        time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+        tps = floor((sum_txn_end_count/20)/3,4),    
+        os_cpu=floor(os_cpu, 4),
+        jvm_cpu_usage=floor(jvm_cpu_usage, 4),
+        jvm_heap_usage=floor(jvm_heap_usage, 4),
+        sql_elapse=floor(sql_elapse, 4),
+        txn_elapse = floor(txn_elapse, 4),
+        os_used_memory= floor(os_used_memory/1024, 4)
+    | fields _time, system_id, _target, was_id, tps, os_cpu, jvm_cpu_usage, jvm_heap_usage, active_txns, jvm_thread_count, open_file_count, open_socket_count, request_rate, active_db_sessions, sql_exec_count, sql_prepare_count, sql_fetch_count, txn_elapse, time, os_used_memory
+]
+|  search system_id== $("system_id")
+| eval was_id = str(was_id), system_id=$("system_id")
+]

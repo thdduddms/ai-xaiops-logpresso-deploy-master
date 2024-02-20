@@ -1,0 +1,86 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+set system_id =$("system_id")
+ 
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(now(), "1m"))
+
+| table from=$("from") to=$("to") sentry_cpu_realtime_1s_resource
+| rename kernel as cpu_system, idle as cpu_idle, user as cpu_user
+| eval _time = datetrunc(_time,"1m"),
+        cpu_usage = cpu_system + cpu_user
+| stats
+		avg(cpu_idle) as cpu_idle,
+        avg(cpu_system) as cpu_system,
+        avg(cpu_usage) as cpu_usage,
+        max(cpu_usage) as cpu_usage_max,
+        avg(cpu_user) as cpu_user by _time, _host
+| join type=inner _time,_host [
+		table from=$("from") to=$("to") sentry_memory_realtime_1s_resource
+        | join _host [ sentry | fields os, guid | rename guid as _host | eval os = lower(os) ] 
+        | eval
+        		_time = datetrunc(_time , "1m"),
+                 memory_usage = ((ptotal-pfree) / ptotal) * 100,
+                convert = if(os == "linux*", pow(1024,1), pow(1024,2)),
+                pfree = floor(pfree/convert, 0),
+                ptotal = floor(ptotal/convert, 0),
+                swapfree = floor(swapfree/ convert, 0),
+                swaptotal = floor(swaptotal/convert, 0),
+                memory_used = ptotal - pfree,
+                swap_used = swaptotal- swapfree,
+                | stats avg(memory_used) as memory_used, avg(swap_used) as swap_used, avg(pfree) as phy_free, avg(ptotal) as phy_total,
+                avg(swapfree) as swap_free, avg(swaptotal) as swap_total, avg(memory_usage) as memory_usage by _time, _host, os
+                 ]
+| join type=inner _time, _host [
+		table from=$("from") to=$("to") sentry_network_realtime_1m_resource
+		| eval 
+        		_time = datetrunc(_time , "1m"), 
+                rx_bytes_delta = if(rx_bytes_delta < 0, 0, rx_bytes_delta),
+                tx_bytes_delta = if(tx_bytes_delta < 0, 0, tx_bytes_delta),
+				rx_pkts_delta = if(isnotnull(rx_pkts_delta), rx_pkts_delta, rx_nucast_pkts_delta+rx_ucast_pkts_delta), 
+ 			    tx_pkts_delta = if(isnotnull(tx_pkts_delta), tx_pkts_delta, tx_nucast_pkts_delta+tx_ucast_pkts_delta), 
+                network = rx_bytes_delta + tx_bytes_delta,
+        		network = if(network < 0, 0, network)
+		| stats avg(rx_bytes_delta) as rx_bytes_delta, avg(tx_bytes_delta) as tx_bytes_delta, avg(rx_pkts_delta) as rx_pkts_delta, avg(tx_pkts_delta) as tx_pkts_delta, avg(rx_discards_delta) as rx_discards_delta, avg(rx_errors_delta) as rx_errors_delta,
+        avg(tx_discards_delta) as tx_discards_delta, avg(tx_errors_delta) as tx_errors_delta, avg(network) as network
+        by _time, _host 
+         | eval convert = pow(1024,1),
+             rx_discards_delta = nvl(rx_discards_delta, 0),
+             rx_errors_delta = nvl(rx_errors_delta, 0),
+             tx_discards_delta = nvl(tx_discards_delta, 0),
+             tx_errors_delta = nvl(tx_errors_delta, 0)
+        ]
+| rename _host as host_name
+| eval
+		system_id = $("system_id"),
+        time = str(_time, "yyyy-MM-dd HH:mm:ss"),
+        _target = host_name
+| eval
+        cpu_idle=floor(cpu_idle,4),
+        cpu_system=floor(cpu_system,4),
+        cpu_usage=floor(cpu_usage,4),
+        cpu_usage_max=floor(cpu_usage_max,4),
+        cpu_user=floor(cpu_user,4),
+        memory_usage=floor(memory_usage,4),
+        memory_used=floor(memory_used,4),
+        network=floor(network,4),
+        phy_free=floor(phy_free,4),
+        rx_bytes_delta=floor(rx_bytes_delta,4),
+        rx_discards_delta=floor(rx_discards_delta,4),
+        rx_errors_delta=floor(rx_errors_delta,4),
+        rx_pkts_delta=floor(rx_pkts_delta,4),
+        swap_free=floor(swap_free,4),
+        swap_used=floor(swap_used,4),
+        tx_bytes_delta=floor(tx_bytes_delta,4),
+        tx_discards_delta=floor(tx_discards_delta,4),
+        tx_errors_delta=floor(tx_errors_delta,4),
+        tx_pkts_delta=floor(tx_pkts_delta,4),
+        network = floor(network/convert, 4)
+
+| # [  XAIOps 대상만 필터링 하기
+| eval target_type = nvl(inst_type, "os"),
+	key = concat(system_id, "|", target_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)
+| fields - key, enable 

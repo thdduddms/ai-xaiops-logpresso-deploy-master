@@ -1,0 +1,26 @@
+파라미터 : [string module, string inst_type]
+설명 : 관리자용] 장기부하예측 DM 생성용 쿼리문 generate ( avg 만 생성 ) / (db_segment, db_tablespace 제외)
+
+proc server_dm_metric($("module"),$("inst_type")) 
+| eval imp_table = case( in(inst_type,"was","db","tp","web","network", "os" ), concat("exem_aiops_lngtrm_fcst_", inst_type),
+                         in(table,"exem_aiops_anls_inst_code"), "exem_aiops_lngtrm_fcst_code")
+| eval metric_stats = concat("avg(", metric_id, ") as ", metric_id)
+        , metric_floor = concat(metric_id, "=floor(", metric_id, ",4)")
+   , metric_fields = metric_id
+| stats array(metric_stats) as metric_stats, array(metric_floor) as metric_floor, array(metric_fields) as metric_fields by table, imp_table, inst_product_type
+| eval metric_stats = strjoin(", ", metric_stats)
+        , metric_floor = strjoin(", ", metric_floor)
+        , metric_fields = strjoin(", ", metric_fields)
+| eval dm_table = "lngtrm"
+| lookup lu_meta_query dm_table output query
+| eval query = if(isnotnull(inst_product_type), replace(query, "$inst_product_type_search$", "| search inst_product_type==\"$inst_product_type$\" "), replace(query, "$inst_product_type_search$", ""))
+| eval query = replace(query, "$table$", table)
+        , query = replace(query, "$inst_product_type$", inst_product_type)
+        , query = replace(query, "$metric_stats$", metric_stats)
+        , query = replace(query, "$metric_floor$", metric_floor)
+        , query = replace(query, "$metric_fields$", metric_fields)
+        , query = replace(query, "$imp_table$", imp_table)
+        , query = replace(query, "$inst_type$", $("inst_type"))
+| fields query
+| stats array(query) as query
+| eval query = concat( strjoin("\n \n", query))  

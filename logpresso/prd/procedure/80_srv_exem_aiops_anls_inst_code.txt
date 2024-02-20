@@ -1,0 +1,94 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+set system_id =$("system_id")
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set from_guid=nvl($("from_date"), datetrunc(dateadd(now(), "min", -2), "1m"))
+| set to=nvl($("to_date"), datetrunc(dateadd(now(), "min", -1), "1m"))
+
+| table from=$("from") to=$("to") xapm_txn_detail 
+| eval  _time = datetrunc(_time, "1m")
+| search isnotnull(guid) and isnotnull(tx_code)
+| eval key = concat(system_id,"-",string(was_id))
+| lookup lookup_tier_was_instance key output e2e_code
+| search isnotnull(e2e_code)
+| eval elapse = txn_elapse - remote_elapse, _target= if(contains(tx_code, "/"), tohex( hash("md5", binary(tx_code))), string(tx_code))
+| fields elapse, exception, _time, system_id, guid, tx_code, tx_code_name, e2e_code, txn_elapse, txn_id, txn_name, was_id, _target
+| pivot max(txn_elapse) as max_elapse, count as exec_count, sum(elapse) as sum, sum(exception) as error 
+      rows _time, system_id, guid, tx_code, tx_code_name,txn_id, txn_name,was_id, _target
+      cols e2e_code
+| rename sum:01 as elapse01_avg, sum:02 as elapse02_avg, sum:03 as elapse03_avg, sum:04 as elapse04_avg, sum:05 as elapse05_avg, 
+        sum:06 as elapse06_avg, sum:07 as elapse07_avg, sum:08 as elapse08_avg, sum:09 as elapse09_avg, sum:10 as elapse10_avg,
+        error:01 as error01_count, error:02 as error02_count, error:03 as error03_count, error:04 as error04_count, error:05 as error05_count,
+        error:06 as error06_count,error:07 as error07_count,error:08 as error08_count,error:09 as error09_count,error:10 as error10_count
+| eval
+        error_count = nvl(error01_count, 0) + nvl(error02_count, 0) + nvl(error03_count, 0) + nvl(error04_count, 0) + nvl(error05_count, 0) + 
+                nvl(error06_count, 0) + nvl(error07_count, 0) + nvl(error08_count, 0) + nvl(error09_count, 0) + nvl(error10_count, 0),
+        guid_elapse_sum = nvl(elapse01_avg, 0) + nvl(elapse02_avg, 0) + nvl(elapse03_avg, 0) + nvl(elapse04_avg, 0) + nvl(elapse05_avg, 0) + 
+                nvl(elapse06_avg, 0) + nvl(elapse07_avg, 0) + nvl(elapse08_avg, 0) + nvl(elapse09_avg, 0) + nvl(elapse10_avg, 0),
+        exec_count = nvl(exec_count:01, 0) + nvl(exec_count:02, 0) + nvl(exec_count:03, 0) + nvl(exec_count:04, 0) + nvl(exec_count:05, 0) + 
+                nvl(exec_count:06, 0) + nvl(exec_count:07, 0) + nvl(exec_count:08, 0) + nvl(exec_count:09, 0) + nvl(exec_count:10, 0),
+        max_elapse = max(nvl(max_elapse:01, 0), nvl(max_elapse:02, 0), nvl(max_elapse:03, 0), nvl(max_elapse:04, 0), nvl(max_elapse:05, 0), 
+                nvl(max_elapse:06, 0), nvl(max_elapse:07, 0), nvl(max_elapse:08, 0), nvl(max_elapse:09, 0), nvl(max_elapse:10, 0)),
+        txn_id_info = concat(txn_id, "$$", txn_name)
+| # PG에 저장되면 제외할 구문
+| # join type=leftonly guid [ table from=$("from") to=$("to") exem_aiops_anls_inst_code | stats count by guid | fields guid ]
+| # join type=leftonly guid [ table from=$("from_guid") to=$("to") exem_aiops_anls_inst_code | stats count by guid | fields guid ] 
+| sort _time, max_elapse, guid
+| stats last(guid) as guid, sum(exec_count) as exec_count, count as node_count,
+    avg(elapse01_avg) as elapse01_avg, max(elapse01_avg) as elapse01_max, avg(elapse02_avg) as elapse02_avg, max(elapse02_avg) as elapse02_max, avg(elapse03_avg) as elapse03_avg, max(elapse03_avg) as elapse03_max,
+    avg(elapse04_avg) as elapse04_avg, max(elapse04_avg) as elapse04_max, avg(elapse05_avg) as elapse05_avg, max(elapse05_avg) as elapse05_max, avg(elapse06_avg) as elapse06_avg, max(elapse06_avg) as elapse06_max,
+    avg(elapse07_avg) as elapse07_avg, max(elapse07_avg) as elapse07_max, avg(elapse08_avg) as elapse08_avg, max(elapse08_avg) as elapse08_max, avg(elapse09_avg) as elapse09_avg, max(elapse09_avg) as elapse09_max,
+    avg(elapse10_avg) as elapse10_avg, max(elapse10_avg) as elapse10_max,
+    sum(error01_count) as error01_count, sum(error02_count) as error02_count, sum(error03_count) as error03_count, sum(error04_count) as error04_count, sum(error05_count) as error05_count,
+    sum(error06_count) as error06_count, sum(error07_count) as error07_count, sum(error08_count) as error08_count, sum(error09_count) as error09_count, sum(error10_count) as error10_count,
+    avg(guid_elapse_sum) as elapse_avg, max(max_elapse) as elapse_max, sum(guid_elapse_sum) as total_elapse_time, 
+    first(txn_id_info) as txn_id_info
+    by _time, system_id, tx_code, tx_code_name, was_id, _target
+| eval
+    error01_count = nvl(error01_count, 0), error02_count = nvl(error02_count, 0), error03_count = nvl(error03_count, 0), error04_count = nvl(error04_count, 0), error05_count = nvl(error05_count, 0),
+    error06_count = nvl(error06_count, 0), error07_count = nvl(error07_count, 0), error08_count = nvl(error08_count, 0), error09_count = nvl(error09_count, 0), error10_count = nvl(error10_count, 0),
+    error_count = nvl(error01_count + error02_count + error03_count + error04_count + error05_count+ error06_count + error07_count + error08_count + error09_count + error10_count, 0),
+    elapse_avg = nvl(floor(elapse_avg, 4), 0),
+    elapse01_avg = nvl(floor(elapse01_avg, 4), 0), elapse02_avg = nvl(floor(elapse02_avg, 4), 0), elapse03_avg = nvl(floor(elapse03_avg, 4), 0), elapse04_avg = nvl(floor(elapse04_avg, 4), 0), elapse05_avg = nvl(floor(elapse05_avg, 4), 0),
+    elapse06_avg = nvl(floor(elapse06_avg, 4), 0), elapse07_avg = nvl(floor(elapse07_avg, 4), 0), elapse08_avg = nvl(floor(elapse08_avg, 4), 0), elapse09_avg = nvl(floor(elapse09_avg, 4), 0), elapse10_avg = nvl(floor(elapse10_avg, 4), 0),
+    elapse01_max = nvl(elapse01_max, 0), elapse02_max = nvl(elapse02_max, 0), elapse03_max = nvl(elapse03_max, 0), elapse04_max = nvl(elapse04_max, 0), elapse05_max = nvl(elapse05_max, 0),
+    elapse06_max = nvl(elapse06_max, 0), elapse07_max = nvl(elapse07_max, 0), elapse08_max = nvl(elapse08_max, 0), elapse09_max = nvl(elapse09_max, 0), elapse10_max = nvl(elapse10_max, 0),
+    total_elapse_time = int(nvl(total_elapse_time, 0)),
+    tx_code = string(tx_code), txn_name = nvl(replace(txn_name, ",", "-"), concat("nvl_",txn_id)), tx_code_name = nvl(replace(tx_code_name, ",", "-"), concat("nvl_", tx_code)),
+    txn_id = substr(txn_id_info, 0, indexof(txn_id_info, "$$")), txn_name = substr(txn_id_info, indexof(txn_id_info, "$$")+2)
+| #  import exem_aiops_anls_sys_e2e_by_was 
+| sort _time, elapse_max, guid
+| stats last(guid) as guid, sum(exec_count) as exec_count, sum(node_count) as node_count,
+    avg(elapse01_avg) as elapse01_avg, max(elapse01_avg) as elapse01_max, avg(elapse02_avg) as elapse02_avg, max(elapse02_avg) as elapse02_max, avg(elapse03_avg) as elapse03_avg, max(elapse03_avg) as elapse03_max,
+    avg(elapse04_avg) as elapse04_avg, max(elapse04_avg) as elapse04_max, avg(elapse05_avg) as elapse05_avg, max(elapse05_avg) as elapse05_max, avg(elapse06_avg) as elapse06_avg, max(elapse06_avg) as elapse06_max,
+    avg(elapse07_avg) as elapse07_avg, max(elapse07_avg) as elapse07_max, avg(elapse08_avg) as elapse08_avg, max(elapse08_avg) as elapse08_max, avg(elapse09_avg) as elapse09_avg, max(elapse09_avg) as elapse09_max,
+    avg(elapse10_avg) as elapse10_avg, max(elapse10_avg) as elapse10_max,
+    sum(error01_count) as error01_count, sum(error02_count) as error02_count, sum(error03_count) as error03_count, sum(error04_count) as error04_count, sum(error05_count) as error05_count, 
+    sum(error06_count) as error06_count, sum(error07_count) as error07_count, sum(error08_count) as error08_count, sum(error09_count) as error09_count, sum(error10_count) as error10_count,
+    avg(elapse_avg) as elapse_avg, max(elapse_max) as elapse_max, sum(total_elapse_time) as total_elapse_time, 
+    first(txn_id_info) as txn_id_info
+    by _time, system_id, _target, tx_code, tx_code_name
+    
+| search system_id==$("system_id")
+| eval 
+    error_count = nvl(error01_count + error02_count + error03_count + error04_count + error05_count+ error06_count + error07_count + error08_count + error09_count + error10_count, 0),
+    elapse01_avg=floor(elapse01_avg,4), elapse02_avg=floor(elapse02_avg,4), elapse03_avg=floor(elapse03_avg,4), elapse04_avg=floor(elapse04_avg,4), elapse05_avg=floor(elapse05_avg,4),
+    elapse06_avg=floor(elapse06_avg,4), elapse07_avg=floor(elapse07_avg,4), elapse08_avg=floor(elapse08_avg,4), elapse09_avg=floor(elapse09_avg,4), elapse10_avg=floor(elapse10_avg,4),
+    elapse_avg=floor(elapse_avg,4),
+    txn_id = substr(txn_id_info, 0, indexof(txn_id_info, "$$")), txn_name = substr(txn_id_info, indexof(txn_id_info, "$$")+2),
+     time = string(_time, "yyyy-MM-dd HH:mm:ss")
+| # 임시. DDS에서 동적 처리 개발 완료 시점에 fields 구문 삭제 필요(23.11.1-이유린)
+| # 1220 영은 fields 구문 주석처리 // 영호님 요청
+| # fields _time,  system_id, _target, guid, tx_code, tx_code_name, txn_id, txn_name, 
+			exec_count, node_count, elapse_avg, elapse_max, total_elapse_time, error_count,
+			elapse01_avg, elapse01_max, elapse02_avg, elapse02_max, elapse03_avg, elapse03_max, elapse04_avg, elapse04_max, elapse05_avg, elapse05_max,
+            elapse06_avg, elapse06_max, elapse07_avg, elapse07_max, elapse08_avg, elapse08_max, elapse09_avg, elapse09_max, elapse10_avg, elapse10_max
+ | # [ 2022.11.18 anomaly 테스트용- 김민지
+ | # eval elapse01_avg = if(_target=="7", 50, elapse01_avg) ]
+| # [XAIOps 대상만 필터링 하기
+| eval target_type = nvl(inst_type, "service"),
+	key = concat(system_id, "|", target_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)
+| fields - key, enable 

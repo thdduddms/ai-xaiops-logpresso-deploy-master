@@ -1,0 +1,23 @@
+파라미터 : [string start, string end, string db_id, int system_id]
+설명 : 티베로 > db_sess_req
+
+table from=$("start") to=$("end") tibero_ora_session_stat 
+| search db_id == long($("db_id")) and system_id == $("system_id")
+| rename 
+   logical_reads_vps as logical_read , 
+   physical_reads_vps as physical_read , 
+   parse_count_hard_vps as parse_count_hard , 
+   parse_count_total_vps as parse_count_total , 
+   db_block_changes_vps as db_block_changes , 
+   executions_vps as executions 
+| eval time=string(time, "yyyy-MM-dd HH:mm:ss"),
+	module = nvl(module, ""), action = nvl(action, ""), 
+	sql_id = nvl(sql_id, ""), sql_exec_start = nvl(sql_exec_start, ""), 
+	sid = nvl(sid, 0), query = nvl(sql_text, ""), lock_holder_inst_id = nvl(lock_holder_inst_id, 0), 
+	lock_holder_sid = nvl(lock_holder_sid, 0), logical_reads = nvl(logical_reads, 0), 
+	physical_reads = nvl(physical_reads, 0), parse_count_hard = nvl(parse_count_hard, 0), 
+	parse_count_total = nvl(parse_count_total, 0), open_cursors_current = nvl(open_cursors_current, 0), 
+	db_block_changes = nvl(db_block_changes, 0), executions = nvl(executions, 0), 
+	undo_blk = nvl(undo_blk, 0), event_id = nvl(event_id, 0), 
+	wait_time = nvl(wait_time, 0), seconds_in_wait = nvl(seconds_in_wait, 0), 
+	cpu = nvl(cpu, 0), pga = nvl(pga, 0), memory = nvl(memory, 0)

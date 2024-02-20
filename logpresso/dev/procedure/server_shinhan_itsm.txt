@@ -1,0 +1,9 @@
+파라미터 : [int system_id, string target_id, string host_name, string from]
+설명 : 모니터링 > 인프라, 인스턴스 / 모니터링, 장애분석 > 변경이력 > ITSM (신한은행 전용)
+
+# 변경이력 창의 ITSM 데이터 리턴 - 더미데이터 **
+| set to = date($("from"), "yyyyMMddHHmm")
+| set from=dateadd(date($("from"),"yyyyMMddHHmm"), "day", -7)
+| table from=$("from") to=$("to") itsm_temp 
+| eval assets_name = replace(concat("\"", assets_name, "\""), ",", "\",\"")
+| search contains(assets_name,concat("\"",$("host_name"), "\"")) or contains(assets_name, concat("\"",$("target_id"), "\""))

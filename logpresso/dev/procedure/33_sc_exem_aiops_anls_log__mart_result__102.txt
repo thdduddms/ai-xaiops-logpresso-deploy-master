@@ -1,0 +1,17 @@
+파라미터 : []
+설명 : 수집기용) DM생성 결과 저장 - 로그이상탐지 LOG
+
+setq [ table duration=10m exem_mart_result
+		| search inst_type == "log" and system_id == 102
+        | stats max(_time) as last_time
+        | eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+        | fields last_time ]
+| set from=datetrunc(dateadd(now(), "min", -3), "1m")
+| set to=datetrunc(now(), "1m")
+| table from=$("from") to=$("to") exem_aiops_anls_log_os, exem_aiops_anls_log_was, exem_aiops_anls_log_web, exem_aiops_anls_log_db, exem_aiops_anls_log_etc, exem_aiops_anls_log_middleware
+| fields _time, system_id, _table, _target
+| eval _time = datetrunc(_time, "1m"), _target = str(_target), mart = _table
+| search _time > $("last_time")
+| stats count by _time, system_id, mart, _target
+| eval module = "exem_aiops_anls_log", inst_type = "log", lp_time = now()
+| import exem_mart_result

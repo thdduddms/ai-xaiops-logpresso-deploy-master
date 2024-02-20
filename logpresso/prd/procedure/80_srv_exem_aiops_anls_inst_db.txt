@@ -1,0 +1,17 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+proc 80_srv_exem_aiops_anls_inst_db_oracle($("system_id"), $("from_date"), $("to_date"))
+| union [ proc 80_srv_exem_aiops_anls_inst_db_tibero($("system_id"), $("from_date"), $("to_date")) ]
+| # 임시. DDS에서 동적 처리 개발 완료 시점에 fields 구문 삭제 필요(23.11.1-이유린)
+| # 1220 영은 fields 구문 주석처리 // 영호님 요청
+| # fields _target, _time, active_sessions, buffer_busy_waits, concurrency_wait_time, consistent_gets, cpu_used_by_this_session, 
+cursor_pin_s_wait_on_x, db_block_changes, db_block_gets, db_cpu, db_file_scattered_read, db_file_sequential_read, db_id, db_time, enq_tx_index_contention, enq_tx_row_lock_contention, 
+enqueue_requests, enqueue_waits, execute_count, file_io_service_time, file_io_wait_time, hard_parse_elapsed_time, 
+inst_product_type, latch_cache_buffers_chains, latch_shared_pool, library_cache_mutex_x, lock_waiting_sessions, library_cache_lock,
+log_file_sequential_read, log_file_switch_completion, log_file_sync, non_idle_wait_time, parse_count_hard, 
+parse_count_total, parse_time_elapsed, physical_reads, physical_writes, physical_writes_direct, recursive_calls, 
+redo_entries, redo_log_size, redo_size, row_cache_lock, running_sessions, session_logical_reads, solution, 
+sort_time, sorts_disk, sorts_memory, system_id, time, transactions, user_calls, user_commits, user_rollbacks, 
+we_buf_wait, we_jc_buf_disk_read, we_jc_buf_disk_readm, we_jc_dbwr_write_os, we_log_flush_commit, we_log_flush_space, 
+we_spin_alloc_lru, we_spin_buf_bucket, we_spin_buf_ws, we_wlock_tx

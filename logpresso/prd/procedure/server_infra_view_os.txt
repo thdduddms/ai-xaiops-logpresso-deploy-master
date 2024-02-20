@@ -1,0 +1,57 @@
+파라미터 : [int system_id, string target_ids, string from]
+설명 : 모니터링>이상탐지>>이상탐지-상관/인과 관계 분석 anls_inst
+target_ids 타겟 지정 구문 추가
+
+ # 인프라 뷰 호스트에 대한 데이터 리턴 **
+| set from = date($("from"), "yyyyMMddHHmm")
+| set to = dateadd( $("from"), "min", 1)
+| set start = dateadd( $("from"), "day", -7)
+| set end = dateadd( $("start"), "min", 1)
+| table from=$("from") to=$("to") exem_aiops_anls_inst_os
+| search system_id == $("system_id") 
+| rename host_name as target_id
+| eval memory_usage = floor(memory_usage,2), inst_type ="os"
+| join _target [
+    	json "{}" 
+        | eval _target = split($("target_ids"), ",") 
+        | explode _target 
+        | eval _target = trim(_target)
+      ]
+|# fields OS DM (exem_aiops_anls_inst_os)의 모든 컬럼
+
+| # [result_fields[ 
+_id || long || not null
+_table || string || not null
+_target || string || not null
+_time || date || not null
+cpu_idle || double || not null
+cpu_system || double || not null
+cpu_usage || double || not null
+cpu_usage_max || long || not null
+cpu_user || double || not null
+disk_free || double || not null
+disk_usage || double || not null
+inst_type || string || not null
+memory_usage || double || not null
+memory_used || double || not null
+network || double || not null
+os || string || not null
+path || string || not null
+phy_free || double || not null
+phy_total || double || not null
+rx_bytes_delta || double || not null
+rx_discards_delta || double || not null
+rx_errors_delta || double || not null
+rx_pkts_delta || double || not null
+swap_free || double || not null
+swap_total || double || not null
+swap_used || double || not null
+system_id || int || not null
+target_id || string || not null
+target_type || string || not null
+time || string || not null
+tx_bytes_delta || double || not null
+tx_discards_delta || double || not null
+tx_errors_delta || double || not null
+tx_pkts_delta || double || not null
+| # ]result_fields]

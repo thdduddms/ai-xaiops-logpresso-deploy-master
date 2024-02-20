@@ -1,0 +1,20 @@
+실행 주기 : */2 * * * *
+경보 사용 : null
+
+# 비정상
+| wget timeout=1 url="http://10.10.31.214:8088/EXEMBank1.2/loadcreate/"
+| wget timeout=1 url="http://10.10.31.214:8088/EXEMBank1.2/mci-eai"
+| wget timeout=1 url="http://10.10.31.214:8088/EXEMBank1.2/loaddeposit"
+| wget timeout=1 url="http://10.10.31.214:8088/EXEMBank1.2/loadtransfer"
+| # 정상
+| wget url="http://10.10.31.214:8088/EXEMBank1.2/list.do"
+| wget url="http://10.10.31.214:8088/test"
+| wget url="http://10.10.31.214:8088/test/longElapse.html"
+| wget url="http://10.10.31.214:8088/test/STMT-longElapse.html"
+| wget url="http://10.10.31.214:8088/test/threadSleep.html"
+| wget url="http://10.10.31.214:8088/test/dbLock.html"
+| wget url="http://10.10.31.214:8088/test/async.html"
+| wget url="http://10.10.31.214:8088/test/STMT-fetchCount.html"
+| wget url="http://10.10.31.214:8088/test/PSTMT-fetchCount.html"
+| wget url="http://10.10.31.214:8088/test/connectionOpenClose.html"
+| wget url="http://10.10.31.214:8088/test/construction.html"

@@ -1,0 +1,48 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+ dbquery intermax_v5_3 
+select
+	a.*,
+	cast(cast((concat('X', host_ip)) as bit(32)) as int) as host_ip_int
+from
+	xapm_server_time a
+join xapm_was_info b 
+on
+	a.server_id = b.was_id
+| # xapm_server_time 테이블에는 한 번이라도 접속했던 기록?이 있으면 다 정보를 들고있음. was_info 테이블이랑 조인해서 실제 대상들에 대해서 서버체크할 필요있음.
+
+| # server_type : 0-DGServer / 1-WAS , TP / 2-DB / 3-WEB / 15-C-Daemon
+| # status : 0-정상, 1-인터맥스(imxosm)<->수집데몬, 2-수집데몬<->WAS인스턴스
+| eval inst_type= case (server_type==1, "was",
+										server_type==2, "db", 
+                                        server_type==3, "web"),
+		host_ip_hex = host_ip,
+        host_ip = if( isnotnull(host_ip_hex), 
+        str(ip(host_ip_int)), null),
+        status = case (status==0 , "CONNECTED",
+                   						status==1 , "DISCONNECTED",
+                   						status==2 , "DOWN")
+| fields server_type, server_id, server_time, logging_time, host_ip, status, dash_enable, host_ip_hex, inst_type
+| # import xapm_server_time
+| search isnotnull(status)
+| eval 
+	sys_id = 102, 
+    server_id =str(server_id), 
+    time = datetrunc(now(), "1m")
+| rename inst_type as target_type, server_id as target_id
+| fields sys_id, time, target_type, target_id, status
+
+|# DPM이 없거나 인터맥스에서 DB 상태체크해야하는 경우 아래 where절 수정
+| join sys_id, target_id, target_type [ 
+	dbquery ai_server 
+    	select 
+        	inst_type as target_type, 
+            sys_id, 
+            target_id 
+         from xaiops_instance 
+         where inst_type = 'was' and enable
+         ]
+| dboutput ai_server rowretry=f stoponfail=t table=lp_health_check_history
+sys_id, time, target_type, target_id, status
+| # status string, sys_id int, target_id string, target_type string, time date

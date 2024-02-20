@@ -1,0 +1,46 @@
+파라미터 : []
+설명 : 설정 > 시스템 > 시스템 연동 >>인스턴스&그룹 sub (DPM-Maxgauge MFO)
+
+# target_id : 본사는 repo_ip 안붙이고, 사이트는 붙여서 사용
+| dbquery maxgauge_222
+      select db_id, host_name, instance_name as inst_name, 
+              db_type as inst_product_type, oracle_version as inst_product_version, 
+              sid as database_name, business_name as desc,
+              COALESCE(( select true from ora_service_info xsg where t1.db_id = xsg.db_id), false) as enable, rac_group_id as rac_info
+      from apm_db_info t1
+      where instance_name is not null
+
+| eval	 target_id = case( inst_product_type=="ORACLE", concat(str(db_id)), 
+											inst_product_type=="TIBERO", concat(str(db_id), "_T"), 
+											inst_product_type=="POSTGRES*", concat(str(db_id), "_P"), 
+											str(db_id) ), 
+			host_name = if(len(host_name)==0, null, host_name),
+			inst_type = "db",
+            inst_product_type = upper(inst_product_type),
+            inst_product_version = if( isnotnull(inst_product_version), concat(inst_product_type, " ", inst_product_version), null),
+			inst=split(inst_product_version, " "), 
+	       inst_info=valueof(inst, 0),
+			inst_product_version =valueof(inst, 1),
+            inst_solution="maxgauge",
+            biz_name=desc
+| fields inst_type, target_id, host_name, inst_name, inst_product_type, inst_product_version, database_name, desc, enable, inst_info, inst_product_version , inst_solution, rac_info, biz_name
+
+
+| # enable : 다른 APM, DPM제품인 경우, 관련 정보를 찾을수 없다면 무조건 true로 출력하는 방향으로 접근할 예정입니다.
+
+| # [result_fields[
+biz_name || string || not null
+database_name || string || not null
+desc || string || not null
+enable || bool || not null
+host_name || string || not null
+inst_info || string || not null
+inst_name || string || not null
+inst_product_type || string || not null
+inst_product_version || string || not null
+inst_solution || string || not null
+inst_type || string || not null
+inst_product_version  || string || not null
+rac_info || object || null
+target_id || string || not null
+| # ]result_fields]

@@ -1,0 +1,33 @@
+실행 주기 : * * * * *
+경보 사용 : dboutput oracle batchsize=10 rowretry=t stoponfail=t table=STD_MSG_SEND CMP_MSG_ID, CMP_USR_ID, ODR_FG, SMS_GB, USED_CD, MSG_GB, WRT_DTTM, SND_DTTM, SND_PHN_ID, RCV_PHN_ID, CALLBACK, SND_MSG, EXPIRE_VAL, SMS_ST, RSLT_VAL, RSRVDID, NAT_CD
+
+# xaiops 사용자 정보 기준으로 연락받을 login_id를 지정
+| set snd_login_id = "admin" | set rcv_login_id = "admin"
+| # 현재버전(22.3.24 기준)
+| dbquery ai_server select login_id as snd_login_id, user_name as snd_name, user_hp as snd_hp, user_email as snd_email from xaiops_user where login_id = :snd_login_id
+| dbquery ai_server select login_id as rcv_login_id, user_name as rcv_name, user_hp as rcv_hp, user_email as rcv_email from xaiops_user where login_id = :rcv_login_id
+| # 한전KDN 버전
+| # dbquery ai_server select login_id as snd_login_id, user_name as snd_name, user_hp as snd_hp, user_email as snd_email from xaiops_user_auth where login_id = :snd_login_id
+| # dbquery ai_server select login_id as rcv_login_id, user_name as rcv_name, user_hp as rcv_hp, user_email as rcv_email from xaiops_user_auth where login_id = :rcv_login_id
+| stats max(snd_login_id) as snd_login_id, max(snd_hp) as snd_hp, max(snd_email) as snd_email, max(rcv_login_id) as rcv_login_id, max(rcv_hp) as rcv_hp, max(rcv_email) as rcv_email
+| eval key = 1
+| join key [ sentry | search not(is_connected) | fields host_name, remote_ip, description, os, last_connect_at
+  | eval key = 1, cmp_msg_id_seq = seq()  	
+]
+| eval CMP_MSG_ID = concat(str(now(), "yyyyMMddHHmmss"), format("%06d", cmp_msg_id_seq))
+    , CMP_USR_ID = "00000"
+    , ODR_FG = "2"
+    , SMS_GB = "1"
+    , USED_CD = "00"
+    , MSG_GB = "M"
+    , WRT_DTTM = str(now(), "yyyyMMddHHmmss")
+    , SND_DTTM = str(now(), "yyyyMMddHHmmss")
+    , SND_PHN_ID = nvl(snd_user_hp, "01011112222")
+    , RCV_PHN_ID = nvl(rcv_user_hp, "01022223333")
+    , CALLBACK = SND_PHN_ID
+    , SND_MSG = concat(host_name, "(", remote_ip, "-", os,") ", "서버의 XAIOps 센트리가 ", str(last_connect_at, "yyyy년 M월 d일 H시 m분 s초"), "에 다운된 상태이며, 점검이 필요합니다.")
+    , EXPIRE_VAL = 0
+    , SMS_ST = "0"
+    , RSLT_VAL = 99
+    , RSRVDID = "AI"
+    , NAT_CD = "52"

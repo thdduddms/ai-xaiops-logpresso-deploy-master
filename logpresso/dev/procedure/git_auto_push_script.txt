@@ -1,0 +1,13 @@
+파라미터 : []
+설명 : null
+
+json "{}" 
+| eval gitignore ="auto_push_script.sh"
+| outputtxt overwrite=t partition=t git/.gitignore  gitignore
+| eval path = concat( "#!/bin/bash\n",
+          				"cd git/\n",
+                        "git add .\n",
+						"git add -u\n",
+						"git commit -a -m 'modified <branch> files on `date`'\n",
+						"git push origin master\n")
+| outputtxt overwrite=t partition=t git/auto_push_script.sh path 

@@ -1,0 +1,16 @@
+파라미터 : [datetime from, datetime to, string target_id]
+설명 : 대시보드 > 디스크 > {서버명} 서버 디스크 사용량(target_id)
+
+table duration=10m from=$("from") to=$("to") sentry_disk_all_partitions_1m_resource 
+| search path!="/mnt*" and path!="/iso/*" and path!="/hpe/os*" and path!="/run*" and path!="/snap*" and path!= "/sys/*"
+		and target_id == nvl($("target_id"), target_id)
+| sort limit=1 -_time, -disk_usage by target_id, path
+| rename target_id as guid  
+| join type=left guid [ 
+	sentry 
+    | fields guid, remote_ip 
+    ] 
+| eval remote_ip = if(guid=="ai-logpresso", "10.10.34.21", remote_ip), guid = concat(guid," (",remote_ip,")") 
+| eval free = field("total")-field("used") 
+| stats first(used) as used, first(free) as free by guid, path
+| order guid, path, used, free

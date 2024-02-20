@@ -1,0 +1,38 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+# 로그 level 건수 수집 (비정규 기능)
+| setq [ table duration=10m exem_aiops_anls_inst_log 
+	| stats max(_time) as last_time
+    | eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+    | fields last_time
+]
+| set from=datetrunc( dateadd(now(), "min", -3), "1m")
+| set to=datetrunc(now(), "1m")
+|  table from=$("from") to=$("to") log_was 
+|  union [ table from=$("from") to=$("to") log_etc ]
+|  union [ table from=$("from") to=$("to") log_db  ]
+|  union [ table from=$("from") to=$("to") log_os  ]
+|  union [ table from=$("from") to=$("to") log_web  ]
+|  union [ table from=$("from") to=$("to") log_middleware   ]
+| rex field=line "\s+(?<log_level>DEBUG|INFO|WARN|ERROR|FATAL|TRACE|CRETICAL)\s+"
+  | eval log_level = lower(log_level)
+   |  eval log_level = nvl(log_level, "none")
+ | lookup lookup_log_logger_info _host output _target, system_id
+ | #  search isnotnull(log_level)
+ | eval _time = datetrunc(_time,"1m") 
+ | # search _time > $("last_time")
+ | pivot count rows _time, _host, _target, system_id cols log_level
+  | eval 
+ 	debug= nvl(debug, 0), 
+    error=nvl(error, 0), 
+    info=nvl(info, 0), 
+    warn=nvl(warn, 0), 
+    fatal=nvl(fatal, 0),  
+    trace=nvl(trace, 0),  
+    cretical=nvl(cretical, 0), 
+    none=nvl(none,0)
+| eval total = debug+error + info +warn+fatal+trace+cretical+none
+| order _time, system_id, _target, _host, trace, debug, error, info,  warn, fatal, cretical,  total
+| fields _time, system_id, _target, _host, trace, debug, error, info,  warn, fatal, cretical, total
+| import exem_aiops_anls_inst_log

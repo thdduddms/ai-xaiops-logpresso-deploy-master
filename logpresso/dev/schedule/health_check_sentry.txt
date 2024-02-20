@@ -1,0 +1,29 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+ sentry | rename guid as target_id, is_connected as status 
+| fields target_id, status
+| eval 
+		status_code = if(status, 0, 1), 
+        status_code = nvl(status_code, 1), 
+        status = case (status_code==0 , "CONNECTED", 
+        							status_code==1 , "DISCONNECTED", 
+                                    status_code==2 , "DOWN"),
+        time = datetrunc(now(), "1m"), 
+        sys_id = 102, 
+        target_type = "os"
+| # import sentry_server_time
+
+|# PG 인서트 부분
+| search  isnotnull(status)
+| fields sys_id, time, target_type, target_id, status
+| join sys_id, target_id [ 
+	dbquery ai_server 
+    	select 
+        	sys_id, 
+            target_id 
+            from xaiops_host where enable
+	]
+| dboutput ai_server rowretry=f stoponfail=t table=lp_health_check_history
+sys_id, time, target_type, target_id, status 
+| # status string, sys_id int, target_id string, target_type string, time date

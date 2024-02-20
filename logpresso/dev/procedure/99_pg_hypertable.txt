@@ -1,0 +1,4 @@
+파라미터 : []
+설명 : tablesacle 테이블 조회
+
+dbquery ai_server select hypertable_name from timescaledb_information.hypertables

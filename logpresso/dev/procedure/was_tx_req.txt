@@ -1,0 +1,20 @@
+파라미터 : [string from, string to, string was_id, int system_id]
+설명 : 근본원인분석(adhoc) WAS tx
+
+# 근본원인분석(adhoc) WAS tx **
+| table from=$("from") to=$("to") exem_aiops_anls_sys_2tier 
+| search was_id == $("was_id") and system_id == $("system_id")
+| eval time = string(time, "yyyy-MM-dd HH:mm:ss"), xid = nvl(xid, ""),
+    txn_name = nvl(txn_name, ""), exec_count = nvl(exec_count, 0),
+    elapse_time = nvl(elapse_time, 0), cpu_time = nvl(cpu_time, 0),
+    memory_used = nvl(memory_used, 0), extcall_count = nvl(extcall_count, 0),
+    extcall_time = nvl(extcall_time, 0), tp_count = nvl(tp_count, 0),
+    tp_time = nvl(tp_time, 0), web_count = nvl(web_count, 0),
+    web_time = nvl(web_time, 0), sql_count = nvl(sql_count, 0),
+    sql_time = nvl(sql_time, 0), prepare_count = nvl(prepare_count, 0),
+    prepare_time = nvl(prepare_time, 0), fetch_count = nvl(fetch_count, 0), fetch_time = nvl(fetch_time, 0),
+    open_db_conn_count = nvl(open_db_conn_count, 0), close_db_conn_count = nvl(close_db_conn_count, 0),
+    open_stmt_count = nvl(open_stmt_count, 0), close_stmt_count = nvl(close_stmt_count, 0),
+    open_rs_count = nvl(open_rs_count, 0), close_rs_count = nvl(close_rs_count, 0),
+    open_obj_count = nvl(open_obj_count, 0), close_obj_count = nvl(close_obj_count, 0),
+    exception_count = nvl(exception_count, 0)

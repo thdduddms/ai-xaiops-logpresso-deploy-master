@@ -1,0 +1,6 @@
+파라미터 : []
+설명 : null
+
+dbquery maxgauge_222
+select db_id, instance_name, host_ip, host_name, oracle_version, Sid, jdbc_url, rac_group_id, pq_inst_id, business_name 
+from apm_db_info

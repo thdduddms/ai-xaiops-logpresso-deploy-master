@@ -1,0 +1,8 @@
+파라미터 : [string tab_nm]
+설명 : 관리자용] 테이블 컬럼 조회
+
+table limit=1000 $("tab_nm")
+| summary
+| eval col = concat(name, " (", type, ")")
+| stats array(col) as col
+| eval col = strjoin("\n", col), table_name = $("tab_nm")

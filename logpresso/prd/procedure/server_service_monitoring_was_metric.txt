@@ -1,0 +1,20 @@
+파라미터 : [int system_id, string tx_code, string txn_name, string field_name, string from]
+설명 : 모니터링 > 서비스 모니터링 > was - was_id별 지표  조회
+
+# 서비스 모니터링 내 지표 데이터 클릭시 나오는 팝업 데이터 리턴 - was_id별 정보 **
+
+| set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") exem_aiops_anls_sys_e2e_by_was 
+| search system_id == $("system_id") and _target == $("tx_code") and txn_name == $("txn_name")
+| eval tx_code = long(tx_code), inst_type = "was", target_id = str(was_id)
+| eval value = floor(field($("field_name")), 2), name = $("field_name"), time = string(_time, "yyyy-MM-dd HH:mm:ss")
+| fields inst_type, target_id, value
+| sort -value
+|# fields elapse_avg, error_count, exec_count, system_id, target_id, tx_code, tx_code_name, txn_id, txn_name
+| fields target_id, inst_type, value
+
+| # [result_fields[
+inst_type || string || not null
+target_id || string || not null
+value || double || not null
+| # ]result_fields]

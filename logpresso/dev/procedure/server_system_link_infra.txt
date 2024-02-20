@@ -1,0 +1,23 @@
+파라미터 : [int system_id, string inst_type]
+설명 : 설정 >  시스템 > 시스템 연동 >> 인프라 main
+
+proc server_system_link_infra_SMS_sentry()
+| # proc server_system_link_infra_SMS_ontune()
+
+| eval system_id=$("system_id"), is_virtual = nvl(is_virtual, false)
+| search inst_type == nvl($("inst_type"), inst_type) 
+
+| fields - system_id, inst_type
+| sort target_id
+
+| # [result_fields[
+addr || string ||  	null	 	 
+cpu_type|| string	|| null	 	 	 	 
+enable|| bool || not null	 	 	 
+host_name|| string	|| not null 	 	 
+is_virtual|| bool	|| not null	 	 
+name|| string || null	 	 	 
+os_info || string	|| null	 	 	 
+os_version || string || null	 	 	 
+target_id || string	|| not null
+| # ]result_fields]

@@ -1,0 +1,40 @@
+파라미터 : [string from_day, string to_day]
+설명 : 설정 > 기타 > 라이선스(현재 시스템만 보기)
+
+# 로그프레소 일일 수집량 (현재시스템) - 실제 logger 수집량과 dbqeury 수집량을 합산하여 제공 (패치전까지) **
+| # 필수!! sys_logger_stats, sys_table_trends 테이블 구조 변경 필요
+| # proc server_lp_license_usages_self("2021-12-01", "2021-12-31")
+| # [ set from = "2021-12-01" | set to = "2021-12-31" ]
+| # set v_from= date($("from_day", str(ago("10d"), "yyyy-MM-dd")), "yyyy-MM-dd")
+| # set v_to = date(str( if(isnull($("to_day")), ago("1m"), dateadd(date($("to_day"), "yyyy-MM-dd" ), "day", 1)), "yyyy-MM-dd"), "yyyy-MM-dd")
+
+| set v_from= date($("from_day"), "yyyy-MM-dd")
+| set v_to= date($("to_day"), "yyyy-MM-dd")
+| table from=$("v_from") to=$("v_to") sys_logger_stats 
+| eval time = str(datetrunc(_time, "1d"), "yyyy-MM-dd") 
+| stats sum(count) as count, sum(volume) as volume by time, type 
+| union [  
+	table from=$("v_from") to=$("v_to") sys_table_trends    
+  | join table [ 
+  		confdb docs logpresso scheduled_queries      
+  		| search (contains(query_string, "wget") or contains(query_string,"dbquery")) and contains(query_string, "import")
+    	| eval table = groups(query_string, "\\| import (\\S+)")      
+        | explode table      
+        | fields table    
+        | stats count by table 
+        | fields table
+    ]
+	| eval time = str(datetrunc(_time, "1d"), "yyyy-MM-dd") 
+	| stats sum(count) as count, sum(volume) as volume by table, time
+	| eval type = "query" 
+] 
+| pivot sum(volume) as volume rows time cols type 
+| eval volume = nvl(logger,0) + nvl(query,0)
+| fields time, volume, logger, query
+
+| # [result_fields[
+logger || long || not null
+query || long || not null
+time || string || not null
+volume || long || not null
+| # ]result_fields]

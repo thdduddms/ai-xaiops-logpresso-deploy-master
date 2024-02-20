@@ -1,0 +1,39 @@
+파라미터 : [int system_id, string module, string inst_type, string from, string to]
+설명 : 대시보드 > 학습현황 > 모듈별 학습 가능 일자 현황 - 대상별 조회
+
+# proc z_dash_data_days(102, "exem_aiops_anls_inst", "os", "20221001", "20221101")
+| # [ set system_id = 102 | set inst_type= "code" | set module = "exem_aiops_fcst" | set from = "20220506" | set to = "20221101" ]
+| set tab_name = concat($("module"),"_",$("inst_type"))
+| table from=$("from") to=$("to") parallel=t $("tab_name") 
+| search system_id == $("system_id") 
+| fields _time, system_id, _target
+| eval _time = str(_time, "yy-MM-dd")
+| pivot count rows system_id, _target cols _time
+| join type=left system_id, _target [ 
+	memlookup name=z_xaiops_relation_infra 
+    | search inst_type == $("inst_type") 
+    | stats count by system_id, inst_type, target_id, pg_target_name 
+    | rename target_id as _target, pg_target_name as target_name 
+    | fields - inst_type, count 
+    ]
+| join type=left system_id, _target [ 
+	memlookup name=z_xaiops_relation_instance 
+    | search inst_type == $("inst_type") 
+    | stats count by system_id, inst_type, target_id, pg_target_name 
+    | rename target_id as _target, pg_target_name as target_name 
+    | fields - inst_type, count 
+    ]
+| join type=left system_id, _target [ 
+	memlookup name=z_xaiops_relation_service 
+	| search inst_type == $("inst_type") 
+	| stats count by system_id, inst_type, target_id, pg_target_name 
+	| rename target_id as _target, pg_target_name as target_name 
+	| fields - inst_type, count 	
+	]
+| join type=left system_id, _target [ 
+	memlookup name=lookup_log_logger_info 
+    | search "exem_aiops_anls_log" == $("module") 
+    | fields system_id, _target, _host 
+    | rename _host as target_name 
+    ]
+| order system_id, _target, target_name

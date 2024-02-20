@@ -1,0 +1,12 @@
+파라미터 : [int system_id, string target_id, string from]
+설명 : 서비스 모니터링 >> 서비스 호출분석 >> 5.3 연계 후 신한쿼리로 변경 필요
+
+set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") xapm_txn_detail
+| eval tx_code=str(tx_code), _target=str(tx_code)
+| search tx_code==$("target_id")
+| fields time, tx_code, tx_code_name, txn_id, txn_name, tid, sql_elapse, remote_elapse, txn_elapse, was_id, _target, tier_id, tid_list
+| # [ proc xapm_etoe_remote_call($("target"), $("to"))
+| fields time, tid, tier_id, elapse_time, c_tid, c_time
+| join tid [ proc xapm_txn_detail($("from"), $("to"))
+| fields time, tx_code, tx_code_name, txn_id, txn_name, tid, sql_elapse, remote_elapse, txn_elapse, was_id, _target, tier_id, tid_list ]

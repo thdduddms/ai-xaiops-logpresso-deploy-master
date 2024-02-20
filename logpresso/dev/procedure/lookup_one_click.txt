@@ -1,0 +1,20 @@
+파라미터 : []
+설명 : 룩업 프로시져 한번에 실행하는 프로시저
+
+proc lookup_apdex_config() | # 가장 먼저 실행되어야함
+| proc lookup_apdex_config_infra_inst_group()
+| proc lookup_apdex_config_instance_inst_group()
+| proc lookup_apdex_config_service_biz()
+| proc lookup_tier_was_instance()
+| proc lookup_total_service_list()
+| proc lookup_log_logger_info()
+| proc 0_sc_switch("all", "t")
+
+| proc lookup_xaiops_module_meta()
+| proc z_xaiops_relation_infra()
+| proc z_xaiops_relation_service()
+| proc z_xaiops_relation_instance()
+
+| proc lookup_api_call_service_alive() | # 서버API에서 서빙 대상 조회
+| proc lookup_xaiops_target_all()
+| proc lookup_total_group_id_list()

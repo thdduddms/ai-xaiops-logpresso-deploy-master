@@ -1,0 +1,17 @@
+파라미터 : [int system_id, string inst_type, string target_id, string from, string to, string business_days]
+설명 : 학습) 장기부하예측 학습데이터 호출 프로시저 - 비즈니스데이
+
+# 장기부하예측 학습데이터 호출  프로시저 **
+| set tab_name = case (in($("inst_type"), "was"), "exem_aiops_lngtrm_fcst_was",
+ 										  in($("inst_type"), "os"), "exem_aiops_lngtrm_fcst_os",
+                                          in($("inst_type"), "db"), "exem_aiops_lngtrm_fcst_db",
+                                          in($("inst_type"), "txn"), "exem_aiops_lngtrm_fcst_txn",
+                                          in($("inst_type"), "code"), "exem_aiops_lngtrm_fcst_code")
+| table from=$("from") to=$("to") $("tab_name") 
+| search _target==$("target_id") and system_id==$("system_id")
+| fields - _id, - _table, - _target, - _time , - system_id
+| eval timepart=string(date(time, "yyyy-MM-dd HH:mm:ss"), "yyyyMMdd")
+| join timepart [ json "{}" | eval timepart = split($("business_days"), ",") | explode timepart ]
+| fields - timepart
+| sort time
+| order time, target_id

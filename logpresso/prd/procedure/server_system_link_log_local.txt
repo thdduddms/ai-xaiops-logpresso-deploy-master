@@ -1,0 +1,27 @@
+파라미터 : []
+설명 : null
+
+proc lookup_log_meta_info() | drop
+| confdb docs araqne-log-api logger 
+| rename namespace as guid 
+| search name=="log.*" 
+| join type=left name [ system loggers | fields name, status ] 
+| eval log_path = case( 
+			in(factory_name,"rotation", "sftp-rotation"), valueof(configs, "file_path"), 
+				factory_name=="windows-event-logger", valueof(configs, "event_source"), 
+				factory_name=="wtmp", valueof(configs, "path"),  
+                	concat( valueof(configs, "base_path"), "/", valueof(configs, "filename_pattern") ) 	), 
+		date_pattern = valueof(configs, "date_pattern"), 
+		date_format = valueof(configs, "date_format"),
+        host_name=valueof(configs, "ssh_profile")
+| # join type=left name [ system loggers | fields name, status ] 
+| join type=left name [	memlookup op=list name=lookup_log_meta_info 
+         | rename lp_host as name 
+         | fields _host, host_name, name ]
+| eval _host=nvl(_host, name), system_id=2
+| search isnotnull(host_name) and host_name!="unix*"
+| # host_name 파싱 더 필요..
+| rename 
+      _host as target_id,
+      description as desc
+| fields guid, system_id, host_name, target_id, factory_name, status, log_path, date_pattern, date_format, desc

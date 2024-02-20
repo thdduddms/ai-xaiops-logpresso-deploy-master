@@ -1,0 +1,9 @@
+파라미터 : []
+설명 : null
+
+table sentry_top_realtime_1s_resource
+| eval l= split(line, "\n")
+| explode l
+| rex field=l "^\s+?(?<PID>\d+)\s+?(?<PPID>\d+)\s(?<USER>[a-zA-Z0-9+_]+)\s+?(?<START>\w+\s{1,2}\d{1,2}|\d+:\d{1,2})\s*(?<TIME>\d+:\d{1,2}|\d+)\s*(?<CPU>\d+.\d+)[^,%]\s*(?<COMMAND>.*)"
+| fields _time, _host, PID, PPID, USER, START, TIME, CPU, COMMAND 
+| search isnotnull(PID)

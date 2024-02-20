@@ -1,0 +1,5 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+proc 80_srv_exem_aiops_anls_inst_db_oracle($("system_id"), $("from_date"), $("to_date"))
+| union [ proc 80_srv_exem_aiops_anls_inst_db_tibero($("system_id"), $("from_date"), $("to_date")) ]

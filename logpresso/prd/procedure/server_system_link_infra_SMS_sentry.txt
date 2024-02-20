@@ -1,0 +1,25 @@
+파라미터 : []
+설명 : 설정 > 시스템 > 시스템 연동 >> 인프라 sub (SMS-sentry)
+
+sentry
+| eval is_virtual = false, name = nvl(name, description), os_info = if( os_info=="Windows*", "Windows", os_info)
+| rename guid as target_id, remote_ip as addr, is_connected as enable, arch as cpu_type, os as os_info, os_ver as os_version
+| eval inst_type="os" 
+| # 12/28 영은 수정, 세진님 요청
+| union [ json "{}"
+| eval inst_type="os", target_id="test", host_name="test1", name=null, addr=null, cpu_type=null, os_info=null, os_version=null, enable=true
+]
+| fields inst_type, target_id, host_name, name, addr, cpu_type, os_info, os_version, enable, is_virtual
+
+| # [result_fields[
+addr || string ||  	 null	 
+cpu_type || string	|| not null	 	 	 	 
+enable || bool || not null	 	 	 
+host_name || string	|| not null 	 	 
+is_virtual || bool	|| not null	 	 
+name || string || null	 	 	 
+os_info || string	|| not null	 	 	 
+os_version || string || not null	 	 	 
+target_id || string	|| not null
+inst_type || string || not null
+| # ]result_fields]

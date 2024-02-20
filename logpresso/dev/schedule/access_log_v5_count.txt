@@ -1,0 +1,12 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+set from= dateadd( datetrunc(now(), "1m"), "min", -90)
+| set to = datetrunc(now(), "1m")
+| table from=$("from") to=$("to") access_log
+| eval _time = datetrunc(_time, "1m")
+| stats count by _time
+| forecast period=10 count=2 count
+| sort limit=3 -_time
+| stats last(count) as count, first(_future) as _future, first(_lower) as _lower, first(_trend) as _trend, first(_upper) as _upper, last(_time) as _time
+| import train_access_log_v5

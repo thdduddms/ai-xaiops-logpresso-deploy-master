@@ -1,0 +1,4 @@
+파라미터 : [string from, string to]
+설명 : null
+
+copytable from=$("from") to=$("to") overwrite=t path="/data/logpresso-backup"

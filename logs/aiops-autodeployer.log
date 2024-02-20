@@ -1,0 +1,283 @@
+2024/02/20 10:17:27.631 [INFO ]  [org.springframework.boot.StartupInfoLogger] [main]- Starting AutodeployerApplication using Java 1.8.0_333 on DESKTOP-C49GNOS with PID 14432 (C:\Users\duddms\IdeaProjects\ai-xaiops-logpresso-deploy-master\autodeployer\target\classes started by duddms in C:\Users\duddms\IdeaProjects\ai-xaiops-logpresso-deploy-master)
+2024/02/20 10:17:27.647 [INFO ]  [org.springframework.boot.SpringApplication] [main]- No active profile set, falling back to 1 default profile: "default"
+2024/02/20 10:17:30.972 [INFO ]  [org.springframework.boot.web.embedded.tomcat.TomcatWebServer] [main]- Tomcat initialized with port(s): 24568 (http)
+2024/02/20 10:17:30.988 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Initializing ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:17:30.988 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting service [Tomcat]
+2024/02/20 10:17:30.988 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting Servlet engine: [Apache Tomcat/9.0.71]
+2024/02/20 10:17:31.225 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Initializing Spring embedded WebApplicationContext
+2024/02/20 10:17:31.225 [INFO ]  [org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext] [main]- Root WebApplicationContext: initialization completed in 3531 ms
+2024/02/20 10:17:32.079 [INFO ]  [springfox.documentation.spring.web.PropertySourcedRequestMappingHandlerMapping] [main]- Mapped URL path [/v2/api-docs] onto method [springfox.documentation.swagger2.web.Swagger2Controller#getDocumentation(String, HttpServletRequest)]
+2024/02/20 10:17:32.491 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:17:32.507 [WARN ]  [org.springframework.context.support.AbstractApplicationContext] [main]- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'; nested exception is org.springframework.boot.web.server.PortInUseException: Port 24568 is already in use
+2024/02/20 10:17:32.516 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Pausing ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:17:32.516 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Stopping service [Tomcat]
+2024/02/20 10:17:32.525 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Stopping ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:17:32.526 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Destroying ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:17:32.529 [INFO ]  [org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener] [main]- 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2024/02/20 10:17:32.561 [ERROR]  [org.springframework.boot.diagnostics.LoggingFailureAnalysisReporter] [main]- 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 24568 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 24568 or configure this application to listen on another port.
+
+2024/02/20 10:18:41.518 [INFO ]  [org.springframework.boot.StartupInfoLogger] [main]- Starting AutodeployerApplication using Java 1.8.0_333 on DESKTOP-C49GNOS with PID 15264 (C:\Users\duddms\IdeaProjects\ai-xaiops-logpresso-deploy-master\autodeployer\target\classes started by duddms in C:\Users\duddms\IdeaProjects\ai-xaiops-logpresso-deploy-master)
+2024/02/20 10:18:41.518 [INFO ]  [org.springframework.boot.SpringApplication] [main]- No active profile set, falling back to 1 default profile: "default"
+2024/02/20 10:18:45.020 [INFO ]  [org.springframework.boot.web.embedded.tomcat.TomcatWebServer] [main]- Tomcat initialized with port(s): 24568 (http)
+2024/02/20 10:18:45.035 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Initializing ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:18:45.035 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting service [Tomcat]
+2024/02/20 10:18:45.035 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting Servlet engine: [Apache Tomcat/9.0.71]
+2024/02/20 10:18:45.273 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Initializing Spring embedded WebApplicationContext
+2024/02/20 10:18:45.273 [INFO ]  [org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext] [main]- Root WebApplicationContext: initialization completed in 3707 ms
+2024/02/20 10:18:45.844 [INFO ]  [springfox.documentation.spring.web.PropertySourcedRequestMappingHandlerMapping] [main]- Mapped URL path [/v2/api-docs] onto method [springfox.documentation.swagger2.web.Swagger2Controller#getDocumentation(String, HttpServletRequest)]
+2024/02/20 10:18:46.254 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:18:46.254 [WARN ]  [org.springframework.context.support.AbstractApplicationContext] [main]- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'; nested exception is org.springframework.boot.web.server.PortInUseException: Port 24568 is already in use
+2024/02/20 10:18:46.254 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Pausing ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:18:46.254 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Stopping service [Tomcat]
+2024/02/20 10:18:46.270 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Stopping ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:18:46.270 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Destroying ProtocolHandler ["http-nio-24568"]
+2024/02/20 10:18:46.287 [INFO ]  [org.springframework.boot.autoconfigure.logging.ConditionEvaluationReportLoggingListener] [main]- 
+
+Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+2024/02/20 10:18:46.303 [ERROR]  [org.springframework.boot.diagnostics.LoggingFailureAnalysisReporter] [main]- 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 24568 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 24568 or configure this application to listen on another port.
+
+2024/02/20 10:19:12.571 [INFO ]  [org.springframework.boot.StartupInfoLogger] [main]- Starting AutodeployerApplication using Java 1.8.0_333 on DESKTOP-C49GNOS with PID 28756 (C:\Users\duddms\IdeaProjects\ai-xaiops-logpresso-deploy-master\autodeployer\target\classes started by duddms in C:\Users\duddms\IdeaProjects\ai-xaiops-logpresso-deploy-master)
+2024/02/20 10:19:12.577 [INFO ]  [org.springframework.boot.SpringApplication] [main]- No active profile set, falling back to 1 default profile: "default"
+2024/02/20 10:19:15.607 [INFO ]  [org.springframework.boot.web.embedded.tomcat.TomcatWebServer] [main]- Tomcat initialized with port(s): 24567 (http)
+2024/02/20 10:19:15.623 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Initializing ProtocolHandler ["http-nio-24567"]
+2024/02/20 10:19:15.623 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting service [Tomcat]
+2024/02/20 10:19:15.623 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting Servlet engine: [Apache Tomcat/9.0.71]
+2024/02/20 10:19:15.842 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Initializing Spring embedded WebApplicationContext
+2024/02/20 10:19:15.842 [INFO ]  [org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext] [main]- Root WebApplicationContext: initialization completed in 3223 ms
+2024/02/20 10:19:16.429 [INFO ]  [springfox.documentation.spring.web.PropertySourcedRequestMappingHandlerMapping] [main]- Mapped URL path [/v2/api-docs] onto method [springfox.documentation.swagger2.web.Swagger2Controller#getDocumentation(String, HttpServletRequest)]
+2024/02/20 10:19:16.824 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [main]- Starting ProtocolHandler ["http-nio-24567"]
+2024/02/20 10:19:16.839 [INFO ]  [org.springframework.boot.web.embedded.tomcat.TomcatWebServer] [main]- Tomcat started on port(s): 24567 (http) with context path ''
+2024/02/20 10:19:16.839 [INFO ]  [springfox.documentation.spring.web.plugins.DocumentationPluginsBootstrapper] [main]- Context refreshed
+2024/02/20 10:19:16.871 [INFO ]  [springfox.documentation.spring.web.plugins.DocumentationPluginsBootstrapper] [main]- Found 1 custom documentation plugin(s)
+2024/02/20 10:19:16.918 [INFO ]  [springfox.documentation.spring.web.scanners.ApiListingReferenceScanner] [main]- Scanning for api listing references
+2024/02/20 10:19:17.139 [INFO ]  [org.springframework.boot.StartupInfoLogger] [main]- Started AutodeployerApplication in 5.07 seconds (JVM running for 6.096)
+2024/02/20 10:21:46.806 [INFO ]  [org.apache.juli.logging.DirectJDKLog] [http-nio-24567-exec-1]- Initializing Spring DispatcherServlet 'dispatcherServlet'
+2024/02/20 10:21:46.806 [INFO ]  [org.springframework.web.servlet.FrameworkServlet] [http-nio-24567-exec-1]- Initializing Servlet 'dispatcherServlet'
+2024/02/20 10:21:46.808 [INFO ]  [org.springframework.web.servlet.FrameworkServlet] [http-nio-24567-exec-1]- Completed initialization in 2 ms
+2024/02/20 10:22:17.933 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 0_sc_lists
+2024/02/20 10:22:17.933 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 0_sc_switch
+2024/02/20 10:22:17.949 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 0_scheduled_query_switch
+2024/02/20 10:22:17.949 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 0_필독_sc_DM생성시_시스템ID분리
+2024/02/20 10:22:17.950 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 0_필독_프로시저_생성시
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_dm__anls_inst_db
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_dm__anls_inst_os
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_dm__anls_inst_was
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_inst_code__102
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_inst_db__102
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_inst_db_tibero__102
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_inst_network__102
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_inst_os__102
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_inst_tp__102
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_inst_was__102
+2024/02/20 10:22:17.951 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_inst_web__102
+2024/02/20 10:22:17.959 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sc_exem_aiops_anls_log__mart_result__102
+2024/02/20 10:22:17.959 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sj_dm__anls_inst_db_oracle
+2024/02/20 10:22:17.959 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 33_sj_dm__anls_inst_db_tibero
+2024/02/20 10:22:17.959 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_code
+2024/02/20 10:22:17.962 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_code_53
+2024/02/20 10:22:17.962 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_db
+2024/02/20 10:22:17.964 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_db_oracle
+2024/02/20 10:22:17.965 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_db_tibero
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_network
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_os
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_tp
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_was
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 80_srv_exem_aiops_anls_inst_web
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 90_gen_dm_import_anls
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 90_gen_service_dm
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 90_gen_service_full_query
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_change_diff
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_change_list
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_change_list_wall
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_change_lookup_list
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_anls_inst_log
+2024/02/20 10:22:17.966 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_conn_profile
+2024/02/20 10:22:17.978 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_local_jdbc_logger
+2024/02/20 10:22:17.978 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_local_jdbc_logger_2
+2024/02/20 10:22:17.978 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_local_jdbc_logger_3
+2024/02/20 10:22:17.982 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_local_jdbc_logger_4
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_local_jdbc_logger_5
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_logger_anls_log
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_logger_local_jdbc
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_logger_local_jdbc_copy
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_create_tablespace_logger_dev
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_dev_prd_diff
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_dev_prd_diff_lu
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_gen_lngtrm_query
+2024/02/20 10:22:17.984 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_gen_mxg_lookup
+2024/02/20 10:22:17.998 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_log_register
+2024/02/20 10:22:17.999 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_loss_serve_call
+2024/02/20 10:22:18.000 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_loss_serve_call_dev
+2024/02/20 10:22:18.000 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_loss_serve_call_window
+2024/02/20 10:22:18.000 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_object_list_search
+2024/02/20 10:22:18.000 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_pg_hypertable
+2024/02/20 10:22:18.002 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_pg_modify_list
+2024/02/20 10:22:18.002 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_pg_modify_list_mpsearch
+2024/02/20 10:22:18.002 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_pg_stat_activity
+2024/02/20 10:22:18.002 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_proc_info
+2024/02/20 10:22:18.002 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_proc_info_dev
+2024/02/20 10:22:18.002 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_procedure_list
+2024/02/20 10:22:18.008 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_procedure_patch_note
+2024/02/20 10:22:18.008 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_procedure_ref
+2024/02/20 10:22:18.008 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_running_query
+2024/02/20 10:22:18.008 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_scheduled_queries_list
+2024/02/20 10:22:18.008 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_select_tab_cols
+2024/02/20 10:22:18.014 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_sentry_logger_create_exec
+2024/02/20 10:22:18.015 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_stream_queries_list
+2024/02/20 10:22:18.016 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_table_count
+2024/02/20 10:22:18.016 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_table_info
+2024/02/20 10:22:18.017 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_tohash_log_guid
+2024/02/20 10:22:18.017 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - 99_wall_list
+2024/02/20 10:22:18.017 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - collector_tx_code_info
+2024/02/20 10:22:18.019 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - db_event_req
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - db_sess_req
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - dev_serving_data_json
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - exem_aiops_lngtrm_fcst
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - exem_aiops_lngtrm_fcst_business_day
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - exem_aiops_wclst_db
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - exem_aiops_wclst_was
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - get_tid_list_from_xapm_etoe_data_set
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - git_auto_push_script
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - inst_solution
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - instance_date
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - instance_info_db
+2024/02/20 10:22:18.020 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - instance_info_was
+2024/02/20 10:22:18.032 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - janghh_sh_service_guid
+2024/02/20 10:22:18.033 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - lookup_api_call_service_alive
+2024/02/20 10:22:18.033 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - lookup_log_logger_info
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - lookup_log_meta_info
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - lookup_one_click
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - lookup_tier_was_instance
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - lookup_total_service_list
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - lookup_xaiops_module_meta
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - lookup_xaiops_target_all
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - maxgauge_status
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - sample_xapm1
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - sample_xapm2
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - sentry_logger_create
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - sentry_logger_remove
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - sentry_ps_ef_parsing
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_anomaly_summary_info_guid
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_config_etc_dataretention
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_dm_metric
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_failure_history_db_blocking_session
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_failure_history_db_event_sql
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_infra_cm
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_infra_monitoring_cm
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_infra_monitoring_disk_chart
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_infra_monitoring_network_chart
+2024/02/20 10:22:18.034 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_infra_monitoring_top_alarm
+2024/02/20 10:22:18.049 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_infra_monitoring_top_table
+2024/02/20 10:22:18.050 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_infra_view_os
+2024/02/20 10:22:18.050 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_db_session_min
+2024/02/20 10:22:18.050 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_failure_analysis_db_from
+2024/02/20 10:22:18.050 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_failure_analysis_from
+2024/02/20 10:22:18.050 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_failure_analysis_guid_min
+2024/02/20 10:22:18.052 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_failure_analysis_to
+2024/02/20 10:22:18.052 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_relation_service_list
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_view_db
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_view_tp
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_view_was
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_instance_view_web
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_log_msg_more
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_log_msg_viewer
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_lp_license_usages
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_lp_license_usages_self
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_manage_connect_profiles
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_manage_loggers
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_metric_chart
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_metric_data_step1_table
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_metric_data_step2_target
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_metric_data_step3_metric
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_metric_data_step4_chart
+2024/02/20 10:22:18.054 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_metric_data_step4_str
+2024/02/20 10:22:18.065 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_monitoring_relation_anls_inst
+2024/02/20 10:22:18.066 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_monitoring_relation_os_process
+2024/02/20 10:22:18.067 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_service_map_biz_list
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_service_monitoring_chart_min
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_service_monitoring_was_elapse
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_service_monitoring_was_elapse_stats
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_service_monitoring_was_elapse_xview
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_service_monitoring_was_metric
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_shinhan_itsm
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_shinhan_meta
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_shinhan_scm
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_infra
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_infra_SMS_ontune
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_infra_SMS_sentry
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_infra_group
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_instance
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_instance_APM_intermax
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_instance_APM_pharos
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_instance_DPM_maxgauge_MFO
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_instance_DPM_maxgauge_MFT
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_log
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_log_local
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_log_sentry
+2024/02/20 10:22:18.068 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_network
+2024/02/20 10:22:18.082 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_service
+2024/02/20 10:22:18.083 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_link_service_biz
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_system_log_loggers
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - server_wclst_db_get_sql_text
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - sparse_log_drain_target
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - sys_idle_loggers
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - sys_thread_count
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - table_backup
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - tibero_db_sess_req
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - txn_info
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - was_tx_req
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - xaiops_service_guid
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - xaiops_service_inst_list
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - xapm_remote_map
+2024/02/20 10:22:18.084 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - ye_exem_aiops_fcst_code_53
+2024/02/20 10:22:18.098 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_admin_monitoring_url
+2024/02/20 10:22:18.099 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_apdex
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_data_days
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_disk_alarm
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_disk_usage
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_dl_result_count
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_dl_target_count
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_dm_dmresult
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_dm_result_count
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_process_log_view
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_process_log_view_query
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_resource_gc
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_sentry_list
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_sentry_logger_list
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_totalview_serving
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_trend_APM
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_trend_DPM
+2024/02/20 10:22:18.100 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_dash_trend_area
+2024/02/20 10:22:18.115 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_server_infra_monitoring
+2024/02/20 10:22:18.115 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_set_system_id
+2024/02/20 10:22:18.116 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_xaiops_relation_infra
+2024/02/20 10:22:18.116 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_xaiops_relation_instance
+2024/02/20 10:22:18.116 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_xaiops_relation_log
+2024/02/20 10:22:18.116 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- text file created - z_xaiops_relation_service
+2024/02/20 10:22:18.116 [INFO ]  [com.exem.xaiops.autodeployer.gitmanagement.impl.GitProcedure] [http-nio-24567-exec-9]- created procedures:: path : "./logpresso/dev/procedure/" count : 200

@@ -1,0 +1,32 @@
+파라미터 : [string date]
+설명 : 관리자용] 패치시 가져갈 텍스트 파일 생성용 프로시저
+
+# 개선해야할점
+| # [ 
+1. 프로시저 설명을 넣자.  > 22.11.14 완료 - 윤철민
+2. 프로시저명이 운영과 개발에 차이가 있는것은 안나온다.
+3. 변경 전화 후를 별도의 파일로 구분한다.
+4. 대상 목록과 변경 유형을 구분한다.(생성, 수정, 삭제)
+]
+| # set date = "20221019" 
+| remote lp_prd [ confdb docs araqne-logdb procedures ]  | # 개발계 용도
+| # confdb docs araqne-logdb procedures | # 운영계 용도
+| fields name, parameters, query_string, description
+| # join type=right name [
+        proc 99_dev_prd_diff( $("date"))        
+        | search category == "프로시저"        
+        | stats array(name) as name 
+        | explode name ] 
+| join type=inner name [ proc 99_change_list( $("date"))
+| search type == "ProcedurePlugin" | fields name ]
+| rename name as procedure_name, description as procedure_description
+| explode parameters 
+| eval name = valueof(parameters, "name"), key = valueof(parameters, "key"), type = valueof(parameters, "type"), param_description = valueof(parameters, "description")
+| fields - parameters 
+| fields procedure_name, procedure_description, type, key, name, param_description, query_string 
+| stats first(procedure_description) as procedure_description, array(type) as type, array(key) as key, array(name) as name, array(param_description) as param_description by procedure_name, query_string 
+| eval params = foreach(concat( _1, " : ", "(", _3, ") ", _2, " / 예) ", _4), key, name, type, param_description)
+| eval params = strjoin("\n", params)
+| eval txt = concat( "[시작]=============== ", procedure_name, "\n", procedure_description, "\n\n", query_string, "\n\n-----------매개변수----------------\n", params, "\n==================================================[끝]\n") 
+| fields txt
+| outputtxt partition=t overwrite=true script/release/procedure_{now:yyyyMMdd}.sql txt		

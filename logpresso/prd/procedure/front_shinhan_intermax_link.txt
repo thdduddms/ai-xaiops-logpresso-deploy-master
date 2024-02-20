@@ -1,0 +1,20 @@
+파라미터 : [string target_id]
+설명 : 인스턴스 모니터링 화면 > 인터맥스 인스턴스 조회화면으로 링크
+
+set target_id= int($("target_id"))
+| dbquery intermax_221
+select
+	t1.description, t1.service_name
+from
+	xapm_service_info t1 join xapm_service_group t2
+	on t1.service_id = t2.service_id
+where
+	description is not null
+	and t2.server_id = :target_id
+| union [ dbquery intermax_v5_3
+select t1.description, t1.service_name
+from xapm_service_info t1 join xapm_service_group t2 on t1.service_id = t2.service_id
+where t2.server_id = :target_id ]
+| eval len = len(description)
+| search len != 0 | fields description, service_name
+| limit 1

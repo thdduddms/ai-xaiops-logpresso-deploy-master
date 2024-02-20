@@ -1,0 +1,5 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+proc 33_sc_exem_aiops_anls_inst_db_2()
+| # proc 33_sc_exem_aiops_anls_inst_db_11()

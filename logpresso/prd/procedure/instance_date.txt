@@ -1,0 +1,17 @@
+파라미터 : [string type]
+설명 : minimal date and maximal date for each instance
+
+set inst_type = $("type") | # 입력받는 파라미터(was, db, os, tp, txn, code)  > proc get_inst_dt("was")
+| set v_table = case ( 	in(  $("inst_type"),"was", "db", "tp", "os" ), concat( "exem_aiops_anls_inst_", $("inst_type") ), 
+									in(  $("inst_type"),"txn", "code" ), concat( "exem_aiops_fcst_", $("inst_type") )       
+                                                     )
+| table $("v_table")
+| eval inst_type_field = field(
+								case( 
+										in( $("inst_type"), "was", "db", "txn" ), concat( $("inst_type"), "_id" ), 
+											$("inst_type")=="tp", "target_id", 
+											$("inst_type")=="os", "host_name",
+											$("inst_type")=="code", "tx_code"  
+                                                     )
+                                         )
+| stats min(_time) as first_time, max(_time) as last_time by inst_type_field

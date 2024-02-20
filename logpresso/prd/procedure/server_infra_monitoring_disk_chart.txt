@@ -1,0 +1,29 @@
+파라미터 : [int system_id, string host_name, string from, string to]
+설명 : 모니터링 > 인프라 모니터링 > 디스크 사용률 차트
+
+  # 인프라 모니터링 화면 내 디스크 사용률 차트 데이터 리턴 (min) **
+
+| table order=asc from=$("from") to=$("to") sentry_disk_all_partitions_1m_resource
+| search target_id == $("host_name")
+
+| eval _time =str(datetrunc(_time, "1h"), "yyyy-MM-dd HH:mm:ss")
+| stats  max(total) as total, max(available) as available, max(used) as used, max(disk_usage) as disk_usage by _time, target_id, path
+
+| eval 
+	total = long(total), 
+    available = long(available), 
+    used = long(used), 
+    time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+    disk_usage = nvl(round( used/total * 100,1), 0)
+    
+| fields time, path, total, available, used, target_id, disk_usage
+
+| # [result_fields[ 
+available || long || not null
+disk_usage || double || not null
+path || string || not null
+target_id || string || not null
+time || string || not null
+total || long || not null
+used || long || not null
+| # ]result_fields]

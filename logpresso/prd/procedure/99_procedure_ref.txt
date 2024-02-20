@@ -1,0 +1,32 @@
+파라미터 : [string name, string type]
+설명 : 프로시저가 참조하는 테이블, 룩업, 메모리룩업의 리스트 조회
+1. name : 검색할 프로시저명 (null일 경우 전체조회)
+2. type : 검색할 연관 객체 타입 (null일 경우 전체 조회)
+
+proc 99_procedure_list()
+| eval parameter = if($("name") == "" or isnull($("name")), name, $("name"))
+| eval type = if( $("type") == "" or isnull($("type")), "name", $("type"))
+| search name == parameter
+|# table은 우선 보류
+| eval 
+		query_string = replace(query_string, "|", "%%\n|"),
+        table = groups(query_string, "\\b(table [^=|\\s\\[\\](as)]+[$(\")a-zA-Z0-9_=\\s\\\\*,]*)%%"), 
+        lookup = groups(query_string, "(lookup \\S*\\s)\\S*\\soutput"),
+        dbquery = groups(query_string, "(dbquery\\s[a-zA-Z_0-9]+)\\b"),
+        memlookup = groups(query_string, "(memlookup\\s(?:op=list\\s)?name=\\S*)\\b"), 
+        procedure = groups(query_string, "(proc [a-zA-Z_0-9]*)\\b"),
+        wget = groups(query_string, "(wget\\s+[a-zA-Z0-9=\":/\\.\\s]+)%%"),
+        remote= groups(query_string, "(remote\\s+[a-zA-Z0-9_]+\\s*)\\["),
+| fields name, table, lookup, dbquery, memlookup, procedure, wget, remote, type
+|# 테스트용으로 작성된 프로시저 호출형태 저장한 경우는 제거한다 
+| eval procedure = if(replace(valueof(procedure, 0), "proc ", "") == name, null, procedure)
+| eval table = strjoin( " ", table), lookup = strjoin("\n", lookup), 
+		procedure = strjoin("\n", procedure), 
+        memlookup = strjoin("\n", memlookup), 
+        dbquery = strjoin("\n", dbquery), 
+        wget=strjoin("\n", wget), remote=strjoin("\n", remote), 
+        table = replace(table, "\n\n", "\n")
+| search isnotnull(field(type))
+| sort name | fields - type
+| eval table = replace(replace(table, "\n", ""), "\t", ""), 
+			table = replace(table, " table", "\ntable")

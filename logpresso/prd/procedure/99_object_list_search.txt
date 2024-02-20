@@ -1,0 +1,11 @@
+파라미터 : [string keyword]
+설명 : 관리자용] 프로시저, 예약쿼리, 스트림쿼리, 위젯쿼리에서 검색 키워드 찾기
+
+# set keyword = "proc "
+| proc 99_procedure_list() | eval obj_type = "procedure"
+| union [ proc 99_scheduled_queries_list() | rename title as name | eval obj_type = "scheduled_query" ]
+| union [ proc 99_stream_queries_list() | eval obj_type = "stream_query" ]
+| union [ proc 99_wall_list() | rename widget_query as query_string | eval obj_type = "wall" ] 
+| search contains( query_string, $("keyword") )
+| eval count = len(split( query_string, $("keyword") )) -1
+| order obj_type, name, count, query_string

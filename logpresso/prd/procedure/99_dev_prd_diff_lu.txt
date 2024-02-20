@@ -1,0 +1,31 @@
+파라미터 : []
+설명 : 개발/운영 로그프레소 룩업 테이블 비교 프로시저
+
+json "{}"
+| union [
+	lookuptable lu_data_chart_table | eval _lookup_name="lu_data_chart_table"
+	| join type=leftonly _table [		remote lp_prd [ lookuptable lu_data_chart_table ] ] ]
+| union [ 
+	lookuptable lu_dm_metric  | eval _lookup_name="lu_dm_metric"
+	| join type=rightonly key [		remote lp_prd [ lookuptable lu_dm_metric ] ] ]
+| union [ 
+	lookuptable lu_meta_factory_name  | eval _lookup_name="lu_meta_factory_name"
+	| join type=rightonly factory_name [		remote lp_prd [ lookuptable lu_meta_factory_name ] ] ]    
+| union [
+	lookuptable lu_module_to_dm  | eval _lookup_name="lu_module_to_dm"
+	| join type=leftonly key [		remote lp_prd [ lookuptable lu_module_to_dm ] ] ]
+| union [
+	lookuptable lu_proc_parameters | eval _lookup_name="lu_proc_parameters"
+	| join type=leftonly key [		remote lp_prd [ lookuptable lu_proc_parameters ] ] ]
+| union [
+	lookuptable lu_train_history_status | eval _lookup_name="lu_train_history_status"
+	| join type=leftonly status [		remote lp_prd [ lookuptable lu_train_history_status ] ] ]
+| union [
+	lookuptable sentry_logger_command | eval _lookup_name="sentry_logger_command"
+	| join type=leftonly os [		remote lp_prd [ lookuptable sentry_logger_command ] ] ]
+| union [
+	lookuptable sentry_logger_factory | eval _lookup_name="sentry_logger_factory"
+	| join type=leftonly factory_name [		remote lp_prd [ lookuptable sentry_logger_factory ] ] ]
+| # 무조건 다른 룩업
+| # lu_create_logger(로그이상탐지 수집 정보), lu_create_logger_configs(로그이상탐지 수집설정 정보)
+| # lu_xaiops_target(XAIOps 관리자 모니터링 대상 정보)

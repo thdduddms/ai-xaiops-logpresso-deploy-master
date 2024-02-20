@@ -1,0 +1,17 @@
+실행 주기 : 0 0 * * *
+경보 사용 : null
+
+table duration=1h sentry_disk_all_partitions_1m_resource
+| eval 
+	time = datetrunc(_time, "1d"),
+    sys_id=102,
+    disk_free = available/1024/1024,
+    disk_total = total/1024/1024,
+    disk_used = disk_total-disk_free
+| rename target_id as host_target_id, path as disk_path
+| search disk_path!="/mnt*" and disk_path!="/iso/rhel*" and disk_path!="/hpe/os" and disk_path!="/snap/*" and disk_path!="/data/docker/overlay*" and disk_path!="/var/lib/docker/overlay*" and disk_path!="/home/aiops/docker/overlay*"
+| sort limit=1 -time by host_target_id, disk_path
+| fields host_target_id, time, sys_id, lv_name, disk_path, disk_used, disk_total, disk_usage
+| # 본사는 disk_used, disk_total, disk_usage가 널인 경우가 없는데, 다른 솔루션은 해당 지표의 값이 null인 경우가 있음. 새로운 솔루션 수집시 세 지표는 데이터 확인 후 not null인 값만 적재.
+| import lp_storage_test
+| dboutput ai_server batchsize=2000 rowretry=f stoponfail=t table=lp_disk_status host_target_id, time, sys_id, lv_name, disk_path, disk_used, disk_total, disk_usage

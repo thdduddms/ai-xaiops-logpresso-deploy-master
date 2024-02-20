@@ -1,0 +1,62 @@
+파라미터 : [string from, string to, string inst_type, string module, int system_id, string target_id, string action]
+설명 : 관리자용] 다이렉트 서빙만 가능
+> 장애탐지 (e2e, 2tier) - exem_aiops_anls_sys, 전체 서비스 이상탐지(service) - exem_aiops_anls_service
+
+module_serving_result_service_performance PG테이블변경 영향도 검토필요
+
+# proc 99_loss_serve_call( "2022-01-11 16:03:00", "2022-01-11 16:13:00", "e2e", "exem_aiops_anls_sys", 102, "all", "exec")
+| # proc 99_loss_serve_call( "2022-01-11 16:03:00", "2022-01-11 16:13:00", "service", "exem_aiops_anls_service", 102, "all", "")
+| # proc 99_loss_serve_call( "2022-01-11 16:03:00", "2022-01-11 16:13:00", "2-tier", "exem_aiops_anls_sys", 21, "A68CF9F8627213DA3882FBE601BD9DC298448C11", "")
+| # [ set from = "2022-01-11 16:10:00" | set to = "2022-01-11 16:30:00" |	set inst_type = "e2e" | set module = "exem_aiops_anls_sys" | set system_id = 2 | set target_id = "all" | set action = "exec" ]
+| # 분석 결과 테이블 알고리즘별로 세분화 됨
+module_serving_result_detect_ae
+module_serving_result_detect_dbsln
+module_serving_result_detect_gam
+module_serving_result_detect_rae
+module_serving_result_detect_seqattn
+module_serving_result_predict_dnn
+module_serving_result_predict_gru
+module_serving_result_predict_lstm
+module_serving_result_predict_seq2seq
+| setq [ dbquery ai_server select module, is_window from xaiops_module_meta where module = :module ]
+| dbquery ai_server 
+ SELECT distinct to_char(time, 'YYYY-MM-DD HH24:MI:SS') as time, sys_id as system_id, target_id, inst_type         
+   FROM module_serving_result_detect_dbsln         
+  WHERE sys_id = :system_id           
+    AND inst_type = :inst_type           
+    AND target_id = :target_id           
+    AND time >= :from and time < :to
+union all
+SELECT distinct to_char(time, 'YYYY-MM-DD HH24:MI:SS') as time, sys_id as system_id, target_id, inst_type         
+   FROM module_serving_result_predict_dnn         
+  WHERE sys_id = :system_id           
+    AND inst_type = :inst_type           
+    AND target_id = :target_id           
+    AND time >= :from and time < :to
+union all
+SELECT distinct to_char(time, 'YYYY-MM-DD HH24:MI:SS') as time, sys_id as system_id, target_id, inst_type         
+   FROM module_serving_result_service_performance
+  WHERE sys_id = :system_id           
+    AND inst_type = :inst_type           
+    AND target_id > ''
+    AND time >= :from and time < :to    
+| eval time = datetrunc(date(time, "yyyy-MM-dd HH:mm:ss"), "1m")
+| join type=rightonly time
+[ json "{}" 
+  | eval time = daterange(date($("from"),"yyyy-MM-dd HH:mm:ss"), date($("to"), "yyyy-MM-dd HH:mm:ss"), "1m") 
+  | explode time 
+] 
+| search not($("is_window"))
+| join type=inner +time [
+  set f = date($("from"), "yyyy-MM-dd HH:mm:ss") | set t = date($("to"), "yyyy-MM-dd HH:mm:ss")
+  | set tab_name = case( "exem_aiops_anls_service_service" == concat($("module"),"_",$("inst_type")), "exem_aiops_anls_inst_code", "exem_aiops_anls_sys_2-tier" == concat($("module"),"_",$("inst_type")), "exem_aiops_anls_sys_2tier", concat($("module"),"_",$("inst_type")) )
+  | table from=$("f") to=$("t") $("tab_name")
+  | search system_id == $("system_id") and contains( _target, if( "all"==$("target_id"), "", $("target_id") ) )
+  | eval time = datetrunc(_time, "1m")
+  | stats count by time | eval stored_in_dm = if( count > 0, true, false) | fields time, stored_in_dm
+]
+| eval from = string(time, "yyyy-MM-dd HH:mm:ss"), to = string(dateadd(time, "min", 1), "yyyy-MM-dd HH:mm:ss") 
+		, inst_type = $("inst_type"), module = $("module"), sys_id = int($("system_id")), target_id = $("target_id")
+		, is_window = $("is_window"), action = nvl($("action"),""), stored_in_dm = nvl(stored_in_dm, false)
+| fields - time
+| stream forward=t loss_serve_call

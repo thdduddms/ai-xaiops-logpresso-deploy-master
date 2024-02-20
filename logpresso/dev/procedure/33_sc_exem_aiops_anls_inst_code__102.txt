@@ -1,0 +1,31 @@
+파라미터 : []
+설명 : 수집기용) DM생성 - 이상탐지/부하예측 서비스>거래코드
+
+set system_id = 102
+| setq [table duration=10m exem_aiops_anls_inst_code
+	 | search  system_id == 102
+      | stats max(_time) as last_time
+      | eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -9), "1m"))
+      | fields last_time ]
+
+| proc 80_srv_exem_aiops_anls_inst_code($("system_id"),null, null) 	  
+|  search _time > $("last_time")  
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss")
+
+| import exem_aiops_anls_inst_code
+
+| fields _time, system_id, _target
+| eval lp_time = datetrunc(now(), "1m"),
+        _target = string(_target)
+| stats count, first(lp_time) as lp_time by _time, system_id, _target
+| eval 
+		mart = "exem_aiops_anls_inst_code", 
+        lp_time = datetrunc(now(), "1m"),
+        inst_type = "code",
+        module = "exem_aiops_fcst",
+| import exem_mart_result 
+ 
+| eval _target = "all"
+| stats sum(count) as count, first(lp_time) as lp_time, first(_time) as _time by system_id, _target
+| eval mart = "exem_aiops_anls_inst_code", module = "exem_aiops_anls_service", inst_type = "service" 
+| import exem_mart_result

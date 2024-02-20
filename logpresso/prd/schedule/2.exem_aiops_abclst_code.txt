@@ -1,0 +1,44 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+setq [table duration=10m exem_aiops_abclst_code 
+      | search system_id == 2
+      | stats max(_time) as last_time 
+      | eval last_time = dateadd(nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m")), "min", 1)
+      | fields last_time ] 
+| set from=datetrunc(dateadd(now(), "min", -8), "1m")
+| set to=datetrunc(dateadd(now(), "min", -4), "1m")
+| dbquery intermax_221
+select 
+        _time as _time, time, txn_id, txn_elapse as elapse_time, cast(was_id as varchar) as target_id, guid, txn_name,
+        cast(business_id as varchar) as tx_code, business_name as tx_code_name, 2 as system_id, rn, count, max
+from ( 
+        select _time, time, txn_id, txn_elapse, was_id, guid, txn_name, business_id, business_name, rn, count, max from ( 
+                select _time, time, txn_id, txn_elapse, was_id, guid, txn_name, business_id, business_name, dense_rank() over (partition by _time, business_id order by guid) as rn, count, max(count) over(partition by business_id) as max from ( 
+                        select 
+                            last_value(date_trunc('minute', a.time)) over (partition by guid) as _time, to_char(a.time, 'YYYY-MM-DD HH24:MI:SS') as time, a.txn_id, a.txn_elapse, a.was_id, a.guid, b.txn_name, c.business_id, c.business_name, count(*) over(partition by guid) as count
+                        from xapm_txn_detail a
+                        inner join xapm_txn_name b on a.txn_id = b.txn_id 
+                        inner join xapm_business_info c on b.business_id = c.business_id 
+                        where time >= :from and time < :to
+                ) a 
+        ) a 
+        where rn <= 30
+) a 
+| search count == max
+| fields - count, max, rn
+| eval key = concat(system_id, "-", target_id)
+| lookup lookup_tier_was_instance key output target_id, tier_name
+| search isnotnull(tier_name)
+| rename target_id as txn_was_id
+| join type=leftonly guid [ 
+	table from=$("from") to=$("to") exem_aiops_abclst_code
+    | fields guid ]
+| eval _target = tx_code
+| import exem_aiops_abclst_code
+| # stream forward=t 2.xapm_aiops_abclst_code
+| fields _time, system_id, _target
+| eval mart = "exem_aiops_abclst_code", lp_time = datetrunc(now(),"1m")
+, _target = str(_target), module = "exem_aiops_abclst", inst_type = "code"
+| stats count by mart, _time, system_id, _target, lp_time, module, mart, inst_type
+| import exem_mart_result

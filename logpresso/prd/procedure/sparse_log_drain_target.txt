@@ -1,0 +1,12 @@
+파라미터 : [int system_id, string target_id, string to]
+설명 : 희소로그 분석 모듈의 데이터 조회용 (로그 통합)
+
+# 희소로그 분석 모듈의 데이터 조회용 **
+| set to = date($("to"), "yyyyMMddHHmm")
+| set from = dateadd($("to"), "min", -1)
+| table from=$("from") to=$("to") exem_aiops_anls_log
+| search system_id == $("system_id") and _target == $("target_id")
+| rename _id as line_no
+| eval time = string(_time, "yyyyMMddHHmmss")
+| fields time, line_no, msg | sort time
+| order time,  line_no, msg

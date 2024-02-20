@@ -1,0 +1,11 @@
+파라미터 : []
+설명 : null
+
+dbquery intermax_221 
+select a.service_id , a.server_id , was_name , host_name , group_name , tier_id , d.service_name
+from(
+	select a.service_id, a.server_id, b.was_name , b.host_name, c.group_name, c.tier_id from xapm_service_group a
+		inner join xapm_was_info b on a.server_id = b.was_id
+		inner join xapm_business_group_info c on a.server_id =cast(c.group_id as integer)
+	) a
+inner join xapm_service_info d on a.service_id = d.service_id

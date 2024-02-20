@@ -1,0 +1,49 @@
+파라미터 : [int system_id, string inst_type, string target_ids, string metrics, string from, string to]
+설명 : 모니터링>이상탐지>>이상탐지-상관/인과 관계 분석 anls_inst
+
+# 모니터링>이상탐지>>이상탐지 상관/인과 관계 분석 학습 데이터 전달 **
+| # anls_inst_was, anls_inst_os, anls_inst_tp, anls_inst_web, anls_inst_network **
+| # proc server_monitoring_relation_anls_inst(102, "was", "214,2142,215", "cpu_time,gc_time", "202209141100", "202209141130")
+| # [ set system_id = 2 | set inst_type = "was" | set from = "202209141100" | set to = "202209141130" | set target_ids = "214,215" | set metrics = null ]
+| set module = "exem_aiops_anls_inst"
+|# set inst_type = case($("inst_type") == "host", "os", $("inst_type"))
+| set table_name = concat( $("module"), "_", $("inst_type"))
+| set metrics = if($("metrics") == "", null, $("metrics"))
+| # 수집지표는 무조건 매개변수로 입력되지만 혹시나 안되면 PG를 조회한다.
+| setq [ 
+	dbquery ai_server 
+    	select metric_id from xaiops_metric_module where sys_id = :system_id and inst_type = :inst_type and module = :module and use_type = 1
+		| stats values(metric_id) as column_names | eval column_names = strjoin(",", column_names)
+        | fields column_names
+	]
+| json "{}"
+| eval columns = split(nvl($("metrics"), $("column_names")), ","), key=1 
+| explode columns 
+| eval columns = trim(columns)
+| join key [
+	table from=$("from") to=$("to") $("table_name")
+	| search system_id == $("system_id")
+    | join _target [
+    	json "{}" 
+        | eval _target = split($("target_ids"), ",") 
+        | explode _target 
+        | eval _target = trim(_target)
+      ]
+	| eval key=1
+    ]
+| eval 
+		column_name = columns,
+        column_value = field(column_name)
+| pivot first(column_value) as column_value cols column_name rows _time, system_id, _target
+| eval inst_type = $("inst_type"), time = str(_time, "yyyy-MM-dd HH:mm:ss")
+| rename _target as target_id
+| fields - _time, system_id
+| order time, inst_type, target_id
+| sort target_id, time
+
+| # [result_fields[
+inst_type || string || not null
+target_id || string || not null
+time || string || not null
+파라미터로 넣은 metrics값 || double || not null
+| # ]result_fields]

@@ -1,0 +1,92 @@
+파라미터 : [string system_id, string schema, string jdbc_profile, string type, string version]
+설명 : (미사용) 방법5. type, version, repo 별로 신규 수집설정을 생성하는 배치를 생성
+
+# bypass
+| 
+# type, version 별로 신규 수집설정을 생성하는 배치를 생성 ** 신한적용
+| # ex) {repo_ip}.{schema}.apm_db_os_stat_MFOP, {repo_ip}.{schema}.apm_db_os_stat_MFOP.ms
+
+ | # STEP 1: logapi_logger_create 배치 파일 생성
+| confdb docs araqne-log-api logger 
+| fields configs, factory_name, factory_namespace, name, description
+|# logger의 정보 추출
+| parsemap overlay=t field=configs | fields - configs
+| search if(  replace(name,   concat($("type"), $("version")), "") == "*_", true, false)
+|  eval 
+		name = split(name, "."), 
+        len = len(name), is_mxg = if(valueof(name, 1)=="{schema}", true, false),
+       key = concat( if(is_mxg, valueof(name, 2), valueof(name, 1)) ),
+    
+ |# 잘못 생성된 logger 제외 (key == table_name)
+| search contains(key, concat($("type"))) and (isnotnull(key) and isnotnull(sql))
+
+|# sql문 내부의 기존 schema, sys_id 변경
+| eval         
+		schema = if(is_mxg,lower(valueof(name,1)), null),
+        sql = if( isnotnull(schema), replace(lower(sql), concat( schema, "."), concat(lower($("schema")),".")), sql),
+        where = if( isnotnull(schema), replace(lower(where), concat( schema, "."), concat(lower($("schema")),".")), where),
+        is_repo_ora = if( right(trim( $("type")), 1) == "O", true, false),
+        sql = if( is_repo_ora,
+        				replace(sql, concat( "{system_id} as \"system_id\""), concat($("system_id"), " as \"system_id\"")),
+        				replace(sql, concat( "{system_id} as system_id"), concat($("system_id"), " as system_id")))
+| # repo가 여러개일떄 db_id가 겹치는 경우에 사용
+| eval sql = replace(sql, "{repo_ip}", replace($("jdbc_profile"), "maxgauge_", ""))
+| evalc repo_ip = replace($("jdbc_profile"), "maxgauge_", "")
+|eval 
+		name = concat( $("system_id"), ".", if(is_mxg, concat($("schema"), ".", valueof(name,2)), valueof(name,1)) ),
+ 		name = replace( name, concat( "_", $("type")), "" )               
+| stats dc(name) as count, values(jdbc_profile) as jdbc_profile, values(repo_ip) as repo_ip, values(sql) as sql, values(where) as where
+by factory_name, factory_namespace, name, column, database_name, date_column, data_format, iter_limit,
+key, macro_start_date, repo_ip
+| eval sql = valueof(sql,0), where = valueof(where,0), jdbc_profile = valueof(jdbc_profile,0),
+		 initial_value = str(datetrunc(dateadd(now(), "min", -20), "1m"), "yyyy-MM-dd HH:mm:ss")
+| eval 
+		batch = concat( "date =============================\n", "logapi.createLogger", " ", factory_name, " ", factory_namespace, " ", name, " ", description, "  <<EOF\n" ),
+		batch =concat(batch,  $("jdbc_profile"), "\n", sql, "\n", where, "\n", column, "\n", column2, "\n", initial_value, "\n", "date", "\n", "\n", "\n", "time", "\n" , date_format, "\n"),
+        batch = concat(batch, database_name, "\n", macro_date, "\n", iter_limit, "\n", "\n\nEOF\n")
+| fields batch
+| stats values(batch) as batch
+| eval batch = strjoin("", batch) 
+
+
+
+| # STEP 2 : logpresso_logger_create 배치 파일 생성
+|  union [
+confdb docs logpresso loggers
+| rename full_name as fullname
+| search if(  replace(fullname,   concat($("type"), $("version")), "") == "*_", true, false)
+| eval 
+		name = split(fullname, "."), 
+        len = len(name),
+        is_mxg = if(valueof(name, 1)=="{schema}", true, false),
+       key = concat( if(is_mxg, valueof(name, 2), valueof(name, 1)) )
+       
+| search contains(key, concat($("type"))) and isnotnull(key)
+| join fullname [
+confdb docs araqne-log-api logger
+| search if(  replace(name,   concat($("type"), $("version")), "") == "*_", true, false) ]
+| evalc repo_ip = replace($("jdbc_profile"), "maxgauge_","")
+| eval
+		jdbc_profile = valueof(configs, "jdbc_profile"),
+		name = split(name, "."),
+		is_mxg = if(valueof(name, 1)=="{schema}", true, false),
+		system_id = valueof(name, 0), 
+		repo_ip = valueof(name, 0),
+        schema = if(is_mxg, valueof(name, 1), null)
+| fields fullname, table_name, host, schema, system_id, repo_ip
+| eval 
+		fullname = replace( fullname, schema, $("schema")),
+        fullname = replace( fullname, repo_ip, $("repo_ip")),
+        fullname = replace( fullname, concat( "_", $("type")), "" ),
+        fullname = replace( fullname, $("version"), "" ),
+        host = replace($("jdbc_profile"), "maxgauge_","")
+| eval 
+    batch = concat(  "date =============================\n", "logpresso.createLogger " , fullname, " ", table_name, " ", host, " \n") ]
+| stats values(batch) as batch 
+| eval batch = strjoin("", batch) 
+ 
+|# STEP 3 : BATCH 파일 생성
+| # outputtxt overwrite=t partition=t encoding="UTF-8" script/{now:yyyyMMdd}/create_local_jdbc_logger.batch batch
+
+|# STEP 4: 프로시저 실행 후 아라크네 엔진 > 
+batch.executeFile script/{yyyyMMddHHmm}/create_local_jdbc_logger.batch 실행 

@@ -1,0 +1,5 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+proc past_xapm_jvm_stat_summary("수집시작날짜","새로수집시작할과거날짜")
+|# 수정 후 사용

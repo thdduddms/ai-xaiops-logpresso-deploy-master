@@ -1,0 +1,25 @@
+파라미터 : [int system_id, string target_id, string from, string to]
+설명 : 학습) 부하패턴분석(db)
+
+# 부하패턴분석 db 학습데이터 호출 프로시저 **
+| table from=$("from") to=$("to") ora_sql_stat_10min, ora_sql_stat_10min_tibero
+| search _target == $("target_id") and system_id == $("system_id")
+| eval
+   time = string(_time, "yyyy-MM-dd HH:mm:ss")
+| stats 
+   sum(execution_count) as sum_execution_count, 
+   count(1) as row_count, 
+   sum(elapsed_time) as sum_elapsed_time, 
+   avg(elapsed_time / case(execution_count == 0, 1, execution_count)) as avg_elapsed_time, 
+   stddev(elapsed_time / case(execution_count == 0, 1, execution_count)) as stddev_elapsed_time, 
+   sum(cpu_time) as cpu_time, 
+   sum(wait_time) as wait_time, 
+   sum(logical_reads) as logical_reads, 
+   sum(physical_reads) as physical_reads, 
+   sum(redo_size) as redo_size, 
+   sum(table_scan_blocks_gotten) as table_scan 
+   by time, sql_id, sql_uid
+| rename sum_execution_count as execution_count, sum_elapsed_time as elapsed_time 
+| eval
+   avg_elapsed_time = floor(avg_elapsed_time, 4),
+   stddev_elapsed_time = floor(stddev_elapsed_time, 4)

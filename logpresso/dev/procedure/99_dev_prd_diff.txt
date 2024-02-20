@@ -1,0 +1,63 @@
+파라미터 : [string from]
+설명 : 개발 로그프레소와 운영 로그프레소 비교 프로시저 (프로시저, 스트림쿼리, 예약쿼리)
+
+ table from=$("from") sys_audit_logs | auditmsg locale=ko | search in(category, "프로시저")
+| rex field=msg "(?<name>\S*\s*\"\S*\")"
+| eval name = substr(name, indexof(name, "\"")+1, -1)
+| fields name, category
+| stats count by name, category
+| join name [
+    confdb docs araqne-logdb procedures 
+    | fields name, query_string 
+    | search contains(name, "server_") 
+    | eval query_dev = trim(query_string) 
+    | fields name, query_dev 
+        | join type=left name [ 
+                remote lp_prd [ 
+                        confdb docs araqne-logdb procedures 
+                        | fields name, query_string 
+                        | search contains(name, "server_") 
+                        | eval query_prd = trim(query_string) 
+                        | fields query_prd, name ] 
+		] 
+| search query_dev != query_prd 
+]
+| union [
+table from=$("from") sys_audit_logs | auditmsg locale=ko | search in(category, "예약된 쿼리")
+| rex field=msg "(?<name>\S*\s*\"\S*\")"
+| eval name = substr(name, indexof(name, "\"")+1, -1)
+| fields name, category
+| stats count by name, category
+| join name [
+		confdb docs logpresso scheduled_queries
+        | eval name =title, query_dev = trim(query_string)
+		| fields name, query_dev
+        | join type=left name [
+        		remote lp_prd [
+                confdb docs logpresso scheduled_queries
+		        | eval name =title, query_prd = trim(query_string)
+				| fields name, query_prd  ] 
+		]
+       | search query_dev != query_prd
+] ]
+| union [
+table from=$("from") sys_audit_logs | auditmsg locale=ko | search in(category, "스트림 쿼리")
+| rex field=msg "(?<name>\S*\s*\"\S*\")"
+| eval name = substr(name, indexof(name, "\"")+1, -1)
+| fields name, category
+| stats count by name, category
+| join name [
+    confdb docs logpresso stream_queries 
+    | eval query_dev = trim(query_string)
+    | fields name, query_dev
+    | join type=left name [ 
+    		remote lp_prd [ 
+                confdb docs logpresso stream_queries
+                | eval query_prd = trim(query_prd)
+                | fields name, query_prd ]
+                | search query_dev != query_prd ]
+		]
+]
+| fields - count
+| search isnotnull(query_dev)
+| sort category

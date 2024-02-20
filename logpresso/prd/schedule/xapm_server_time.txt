@@ -1,0 +1,19 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+dbquery intermax_221 select *, CAST(CAST((concat('X', host_ip)) AS bit(32)) AS int) as host_ip_int from xapm_server_time 
+| union [ dbquery intermax_v5_3 select *, CAST(CAST((concat('X', host_ip)) AS bit(32)) AS int) as host_ip_int from xapm_server_time]  
+| # server_type : 0-DGServer / 1-WAS , TP / 2-DB / 3-WEB / 15-C-Daemon
+| # status : 0-정상, 1-인터맥스(imxosm)<->수집데몬, 2-수집데몬<->WAS인스턴스
+| eval inst_type= case (server_type==1, "was",
+										server_type==2, "db", 
+                                        server_type==3, "web"),
+		host_ip_hex = host_ip,
+        host_ip = if( isnotnull(host_ip_hex), str(ip(host_ip_int)), null),
+		status_str = case (status==0 , "CONNECTED",
+                   						status==1 , "DISCONNECTED",
+                   						status==2 , "SERVER_DOWN")
+| # db의 경우 사용안하지만 일단 정의
+| # eval _time=logging_time
+| fields - host_ip_int
+| import xapm_server_time

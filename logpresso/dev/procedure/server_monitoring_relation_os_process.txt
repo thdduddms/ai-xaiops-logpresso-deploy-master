@@ -1,0 +1,62 @@
+파라미터 : [int system_id, string target_id, string ps_metrics, string anomaly_time, string from, string to]
+설명 : 모니터링>이상탐지>>이상탐지-상관/인과 관계 분석 anls_inst_os <-> 프로세스 상위20개 (ps_cpu_usage, ps_mem_usage)
+
+# 모니터링>이상탐지>>이상탐지 상관/인과 관계 분석 학습 데이터 전달 (anls_inst_os, top 프로세스 상위20개의 데이터) **
+| # proc server_monitoring_relation_os_process(102, "ebmciapos01", "cpu_usage,mem_usage", "202210200020", "202210200000", "202210200025")
+| # [ set anomaly_time = "202210200020" | set from = "202210200000" | set to = "202210200025" | set target_id = "ebmciapos01" | set system_id = 102 ]
+| set anomaly_from = $("anomaly_time")
+| set anomaly_to = dateadd(date($("anomaly_from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") sentry_top_realtime_1s_resource 
+| search _host == $("target_id")
+| eval _time = datetrunc(_time, "1m")
+| join type=left _host [
+	sentry | rename guid as _host | fields _host, os ]
+| eval line = split(line, "\n")
+| explode line
+| parse os_cmd_top
+  | sort limit=1 -_id by _time, pid
+| fields _time, _host, pid, command, cpu_usage, mem_usage
+| join pid [
+   table from=$("anomaly_from") to=$("anomaly_to") sentry_top_realtime_1s_resource 
+  | search _host == $("target_id")
+  | eval _time = datetrunc(_time, "1m")
+| join type=left _host [
+  	sentry 
+    | rename guid as _host 
+    | fields _host, os 
+    ]
+  | eval line = split(line, "\n")
+  | explode line
+  | parse os_cmd_top
+  | sort limit=1 -_id by _time, pid
+  | fields _time, _host, pid, command, cpu_usage, mem_usage
+  | eval standard_metric = max(cpu_usage, mem_usage)
+  | sort limit=20 -standard_metric by _time
+  | fields - _time
+  ]
+
+| join type=left _host, pid [
+    dbquery intermax_intermax select time, host_name as _host, cast(pid as varchar), user_name, args as command_detail 
+                            from xapm_os_process_list a inner join xapm_host_info b on a.host_ip=b.host_ip 
+                            where time >= to_timestamp(:from, 'YYYYMMDDHH24MI') 
+                            			and time <= to_timestamp(:to, 'YYYYMMDDHH24MI') and b.host_name = :target_id
+    | sort limit=1 time by pid
+    ]
+| eval command = concat("\"", nvl(command_detail, command), "\""),
+		time = string(_time, "yyyy-MM-dd HH:mm:ss"), user_name = nvl(user_name, "unkown")
+| rename _host as target_id, cpu_usage as ps_cpu_usage, mem_usage as ps_mem_usage
+| fields time, target_id, pid, user_name, ps_cpu_usage, ps_mem_usage, command
+| sort pid, time
+| # drop
+| # 테스트용 (2022.11.10 김민지)
+| # eval ps_mem_usage = if(pid=="4*", rand(100), ps_mem_usage)
+
+| # [result_fields[
+command || string || not null
+pid || string || not null
+ps_cpu_usage || double || not null
+ps_mem_usage || double || not null
+target_id || string || not null
+time || string || not null
+user_name || string || not null
+| # ]result_fields]

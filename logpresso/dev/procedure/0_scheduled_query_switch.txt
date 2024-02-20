@@ -1,0 +1,20 @@
+파라미터 : [string keyword, string action]
+설명 : 로그프레소) 예약쿼리 활성화 (keyword가 포함된 모든 예약쿼리)
+
+# 로그프레소 예약쿼리 활성화 (keyword가 포함된 모든 예약쿼리) **
+| set header = dict( "Content-Type", "application/json")
+| json "{}"
+| eval 
+		keyword = $("keyword")
+| tojson | rename _json as body
+| eval action = if( $("action") == "list", null, concat("/", $("action")))
+| eval HEADER = $("header"),  url=concat( "http://10.10.34.21:14568/logpresso/scheduled-queries", action, "?keyword=", keyword)
+| wget method=post header=HEADER format=json body=body
+| union [ 
+    confdb docs logpresso scheduled_queries
+    | fields title, is_enabled
+    | search contains(title, $("keyword"))
+    | eval show = if($("action") == "list" or isnull($("action")), true, false)
+    | search show | fields title, is_enabled | rename title as data ]
+| search _wget_code == 200 or isnull(_wget_code)
+| parsejson data | fields data | explode data 

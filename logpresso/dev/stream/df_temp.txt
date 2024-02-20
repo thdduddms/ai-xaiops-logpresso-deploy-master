@@ -1,0 +1,34 @@
+# 본사 환경 - 윤철민
+| streamjoin type=left _host [ sentry | rename guid as _host | fields _host, os]
+| # 고객사 환경 - 윤철민
+| # streamjoin _host [ sentry | rename guid as _host | fields _host, os]
+| eval line_Linux = if( os == "Linux", line, null)
+| eval line_HP_UX = if( os == "HP-UX", line, null)
+| eval line_SunOS = if( os == "SunOS", line, null)
+| eval line_AIX = if( os == "AIX", line, null)
+| eval line_Linux_2 = if(_host == "ai-logpresso", line, null) | # 본사용 - 윤철민
+| fields - line
+
+| eval line_Linux = split(line_Linux, "\n")
+| explode line_Linux
+| rex field=line_Linux "(?<lv_name>\S+)\s+(?<total>\d+)\s+\S+\s+(?<available>\S+)\s+[0-9%-]+\s+(?<path>\S+)"
+
+| eval line_HP_UX = split(line_HP_UX, "\n")
+| explode line_HP_UX
+| rex field=line_HP_UX "(?<lv_name>\S+)\s+(?<total>\d+)\s+\S+\s+(?<available>\S+)\s+[0-9%-]+\s+(?<path>\S+)"
+
+| eval line_SunOS = split(line_SunOS, "\n")
+| explode line_SunOS
+| rex field=line_SunOS "(?<lv_name>\S+)\s+(?<total>\d+)\s+\S+\s+(?<available>\S+)\s+[0-9%-]+\s+(?<path>\S+)"
+
+| eval line_AIX = split(line_AIX, "\n")
+| explode line_AIX
+| rex field=line_AIX "(?<lv_name>\S+)\s+(?<total>\d+)\s+\S+\s+(?<available>\S+)\s+[0-9%-]+\s+(?<path>\S+)"
+
+| search isnotnull(path)
+| rename _host as target_id
+| eval total = if(os=="SunOS", long(used)+long(available), total)
+| eval _time = datetrunc(now(), "1m"), convert = pow(1024,1), total=nvl(long(total)*convert,0), available = nvl(long(available)*convert, 0),
+used = long(total-available), disk_usage = nvl(round(used/total*100,1),0)
+| fields _time, available, disk_usage, lv_name, path, target_id, total, used
+| import sentry_disk_all_partitions_1m_resource

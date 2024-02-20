@@ -1,0 +1,47 @@
+파라미터 : [int system_id, string target_id, string from]
+설명 : 서비스 모니터링 >> 서비스 호출분석
+
+ set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") xapm_txn_detail 
+| eval tid = str(tid)
+| join tid [ 
+	proc get_tid_list_from_xapm_etoe_data_set($("system_id"), $("target_id"), $("from"))
+        | eval tid_list=if(isnull(tid_list), top_tid, tid_list), split = split(tid_list, ",")
+    | explode split
+    | rename split as tid
+    | fields tid ]
+| eval target_id=tx_code
+| fields tid, target_id, tx_code, tx_code_name, txn_id, txn_name, sql_elapse, txn_elapse, remote_elapse
+| join type=left tx_code [ dbquery intermax_intermax select tx_code, tx_code_name from xapm_tx_code_info ] 
+| join type=left txn_id [ dbquery intermax_intermax select txn_id, txn_name from xapm_txn_name ] 
+| eval tx_code_name = nvl(tx_code_name, txn_name)
+| join type=left tid [ 
+        table from=$("from") to=$("to") xapm_etoe_remote_call
+        | eval tid=str(tid) , c_tid=str(c_tid)
+        | fields tid, c_tid, tier_id ] 
+|  join type=left tid [ 
+        proc get_tid_list_from_xapm_etoe_data_set($("system_id"), $("target_id"), $("from"))
+       | eval tid_list=if(isnull(tid_list), top_tid, tid_list)
+        | # 본사용 , tid=0제거 
+       | eval tid_list = if((tid_list == "*,0")==true, substr(tid_list ,0,-2), tid_list)
+       | eval tid_list = if((tid_list == "0,*")==true, substr(tid_list ,2), tid_list) 
+       | eval tid_list = if((tid_list == "*,0,*")==true, replace(tid_list, ",0,", ","), tid_list) 
+        |eval tid_list =replace(substr(tid_list, indexof(tid_list, top_tid)), concat(top_tid, ","),"")
+       | rename top_tid as tid ]
+| eval 
+	_target=target_id,
+	tier_id = if(tier_id <10, concat("0",tier_id), str(tier_id))
+| fields tid, c_tid, tx_code, tx_code_name, txn_name, tier_id, sql_elapse, txn_elapse, remote_elapse, _target
+
+| # [result_fields[
+_target || string || not null
+c_tid || string || not null
+remote_elapse || double || not null
+sql_elapse || double || not null
+tid || string || not null
+tier_id || string || not null
+tx_code || string || not null
+tx_code_name || string || not null
+txn_elapse || double || not null
+txn_name || string || not null
+| # ]result_fields]

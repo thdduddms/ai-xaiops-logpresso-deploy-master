@@ -1,0 +1,6 @@
+파라미터 : [string from, string to, string tx_code]
+설명 : (신한) 서비스 장애분석시 해당 서비스 guid 목록을 조회
+
+table from=$("from") to=$("to") xapm_txn_detail
+| search tx_code == $("tx_code")
+| stats count by guid

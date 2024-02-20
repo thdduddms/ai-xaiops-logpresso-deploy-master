@@ -1,0 +1,17 @@
+파라미터 : []
+설명 : null
+
+sentry | sentry-loggers | sentry-logger-configs
+| search name=="log.*" 
+| eval log_path = case( 
+			in(factory_name,"rotation", "sftp-rotation"), valueof(configs, "file_path"), 
+				factory_name=="windows-event-logger", valueof(configs, "event_source"), 
+				factory_name=="wtmp", valueof(configs, "path"),  
+                	concat( valueof(configs, "base_path"), "/", valueof(configs, "filename_pattern"))	), 
+		date_pattern = valueof(configs, "date_pattern"), 
+		date_format = valueof(configs, "date_format")
+| eval _host=nvl(_host, name) , system_id=2
+| search isnotnull(host_name)
+| rename 
+       _host as target_id    
+| fields guid, system_id, host_name, target_id, factory_name, status, log_path, date_pattern, date_format

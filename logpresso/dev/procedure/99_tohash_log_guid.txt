@@ -1,0 +1,6 @@
+파라미터 : [string server_name, string filepath]
+설명 : null
+
+# [ set server_name = "ebmciapos01" | set filepath = "/var/log/messages" ]
+| json "{}"
+| eval log_guid = hash("md5",binary(concat($("server_name"),$("filepath"))))

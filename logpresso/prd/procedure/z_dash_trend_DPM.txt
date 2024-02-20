@@ -1,0 +1,25 @@
+파라미터 : []
+설명 : 대시보드 > 수집량 > DPM 테이블별 수집 추이
+
+ set convert_volume = if(isnull($("convert_volume")), 2, $("convert_volume"))
+ | table duration=30d sys_logger_stats
+| search logger_name == "local*ora*" and logger_name != "*woori*" 
+| union  [  
+	table duration=30d  sys_table_trends    
+  | join table [  
+  		confdb docs logpresso scheduled_queries      
+    	| search (contains(query_string, "wget") or contains(query_string,"dbquery")) 
+			and contains(query_string, "import")
+    	| eval table = groups(query_string, "\\| import (\\S+)")     
+		| explode table      | fields table    
+    	| stats count by table | fields table
+    ] 
+	| eval type = case(table == "xapm*", "APM", table == "ora*", "DPM",
+	table == "apm*", "DPM", table == "*xaiops*", "로그이상탐지", "etc") 
+	| rename table as logger_name | search logger_name == "ora*" or logger_name == "apm*"
+]
+| eval logger_name = substr(logger_name, indexof(logger_name, ".")+1)
+| eval logger_name = substr(logger_name, indexof(logger_name, ".")+1)
+| eval volume_mb = round(volume/pow(1024,int($("convert_volume"))), 2)
+| timechart span=1d sum(volume_mb) by logger_name
+| eval ora_db_stat_major = ceil(ora_db_stat_major),  ora_db_stat_minor = ceil(ora_db_stat_minor),  ora_db_wait = ceil(ora_db_wait),  ora_session_stat = ceil(ora_session_stat),  ora_sql_stat_10min = ceil(ora_sql_stat_10min),  apm_sql_list = ceil(apm_sql_list)

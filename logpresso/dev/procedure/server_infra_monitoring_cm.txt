@@ -1,0 +1,37 @@
+파라미터 : [int system_id, string host_name, string from]
+설명 : 모니터링 > 인프라 모니터링 > cpu&메모리
+
+# 인프라 모니터링 화면 내 CPU & 메모리 위젯데이터 리턴 **
+|# set from =nvl(date($("from"), "yyyyMMddHHmm"), dateadd(now(), "min", -3))
+| set to = dateadd (date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table order=desc from=$("from") to=$("to") exem_aiops_anls_inst_os
+| search host_name == $("host_name") and system_id == $("system_id")
+| limit 1
+| rename host_name as _host, cpu_system as cpu_kernel
+| eval 
+		convert = pow(1024, 1),
+		phy_used = round((phy_total - phy_free)/ convert,2),
+        phy_total = round(phy_total / convert,2),
+        phy_free = round(phy_free /convert,2),
+        swap_used = round(swap_used / convert,2),
+        swap_total = round(swap_total / convert,2),
+        swap_free = round(swap_free / convert, 2),
+        cpu_usage = round(cpu_usage, 2),
+        cpu_kernel = round(cpu_kernel , 2), 
+        memory_usage = round( memory_usage, 2)
+        
+| fields _host, cpu_usage, cpu_kernel, cpu_user, memory_usage, phy_used, phy_total, phy_free, swap_used, swap_total, swap_free
+
+| # [result_fields[ 
+_host || string || not null
+cpu_kernel || double || not null
+cpu_usage || double || not null
+cpu_user || double || not null
+memory_usage || double || not null
+phy_free || double || not null
+phy_total || double || not null
+phy_used || double || not null
+swap_free || double || not null
+swap_total || double || not null
+swap_used || double || not null
+| # ]result_fields]

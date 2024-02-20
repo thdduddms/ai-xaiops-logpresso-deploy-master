@@ -1,0 +1,16 @@
+파라미터 : []
+설명 : 서비스 리스트를 가져와서 룩업 테이블을 생성
+
+dbquery ai_server 
+	select sys_id, total_service_list 
+    from aiops_config_service 
+    where module = 'exem_aiops_anls_service' 
+| eval total_service_list = replace(replace(replace(total_service_list, "[", "") , "]", ""), "\"", "")
+| rename sys_id as system_id
+| rename total_service_list as tx_code 
+| eval tx_code = split(tx_code, ",")
+| explode tx_code
+| eval key = concat(concat(system_id, "_"), tx_code), 
+			flag = true
+| fields tx_code, system_id, key, flag
+| memlookup op=build name=lookup_total_service_list key=key tx_code,system_id, flag

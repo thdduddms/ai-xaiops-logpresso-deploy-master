@@ -1,0 +1,64 @@
+실행 주기 : 5 0 * * *
+경보 사용 : null
+
+set from = datetrunc(dateadd(now(), "day", -1), "1d")
+| set to = datetrunc(now(), "1d")
+| table from=$("from") to=$("to") exem_aiops_anls_inst_os
+| eval _time = datetrunc(_time, "1d")
+| stats 
+	max(disk) as disk,
+	avg(cpu_idle) as cpu_idle,
+	avg(cpu_system) as cpu_system,
+	avg(cpu_usage) as cpu_usage,
+	avg(cpu_user) as cpu_user,
+	avg(memory_usage) as memory_usage,
+	avg(memory_used) as memory_used,
+	avg(network) as network,
+	avg(phy_free) as phy_free,
+	avg(phy_total) as phy_total,
+	avg(rx_bytes_delta) as rx_bytes_delta,
+	avg(rx_discards_delta) as rx_discards_delta,
+	avg(rx_errors_delta) as rx_errors_delta,
+	avg(rx_pkts_delta) as rx_pkts_delta,
+	avg(swap_free) as swap_free,
+	avg(swap_total) as swap_total,
+	avg(swap_used) as swap_used,
+	avg(tx_bytes_delta) as tx_bytes_delta,
+	avg(tx_discards_delta) as tx_discards_delta,
+	avg(tx_errors_delta) as tx_errors_delta,
+	avg(tx_pkts_delta) as tx_pkts_delta
+	by _target, _time, system_id
+| eval 
+	time= string(_time, "yyyy-MM-dd HH:mm:ss"),
+    target_id = _target,
+    cpu_idle=floor(cpu_idle, 4),
+    cpu_system=floor(cpu_system, 4),
+    cpu_usage=floor(cpu_usage, 4),
+    cpu_user=floor(cpu_user, 4),
+    memory_usage=floor(memory_usage, 4),
+    memory_used=floor(memory_used, 4),
+    network=floor(network, 4),
+    phy_free=floor(phy_free, 4),
+    phy_total=floor(phy_total, 4),
+    rx_bytes_delta=floor(rx_bytes_delta, 4),
+    rx_discards_delta=floor(rx_discards_delta, 4),
+    rx_errors_delta=floor(rx_errors_delta, 4),
+    rx_pkts_delta=floor(rx_pkts_delta, 4),
+    swap_free=floor(swap_free, 4),
+    swap_total=floor(swap_total, 4),
+    swap_used=floor(swap_used, 4),
+    tx_bytes_delta=floor(tx_bytes_delta, 4),
+    tx_discards_delta=floor(tx_discards_delta, 4),
+    tx_errors_delta=floor(tx_errors_delta, 4),
+    tx_pkts_delta=floor(tx_pkts_delta, 4)
+| import exem_aiops_lngtrm_fcst_os
+
+| fields _time, system_id, _target
+| eval 
+	mart = "exem_aiops_lngtrm_fcst_os", 
+    lp_time = now(), 
+    _target = str(_target), 
+    module = "exem_aiops_lngtrm_fcst", 
+    inst_type = "os"
+| stats count by mart, _time, system_id, _target, lp_time, module, mart, inst_type
+| import exem_mart_result

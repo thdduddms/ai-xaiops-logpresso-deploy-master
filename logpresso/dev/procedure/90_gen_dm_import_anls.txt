@@ -1,0 +1,86 @@
+파라미터 : [string module, string inst_type, string inst_product_type]
+설명 : 관리자용] anls DM생성 import쿼리 generater (현재ver 사용대상 : anls_inst_{os,was,db})
+
+# system_id 변경해서 사용하기
+| # [ { set module = "exem_aiops_anls_inst" | set inst_type = "was" | set inst_product_type = null
+| # ] }
+| set system_id = 102
+| set module = lower($("module")) | set inst_type = lower($("inst_type")) | set inst_product_type = upper($("inst_product_type"))
+| set tab_name = concat( "dl__", replace($("module"),"exem_aiops_",""), "_", $("inst_type") )
+| table limit=1000 $("tab_name")
+| search nvl(inst_product_type,0) == nvl( upper($("inst_product_type")),0 )
+| summary
+| # 숫자형 지표만 사용
+| search in(type, "long", "double", "float", "int") and not(in(name, "_id", "system_id", "db_id", "was_id", "web_id","tp_id")) | fields name
+
+| # [stat_field : 통계 처리(기본은 avg처리/지표명이 disk_usage면, disk_patition 추가)
+    eval_nvl : 결측치 처리, eval_floor : 소수점 처리
+    confirmation_request : 점검 필요한 지표(데이터 또는 lu_dm_metric 누락)]
+| join type=full +name [
+     lookuptable lu_dm_metric 
+     | search inst_type == $("inst_type") 
+    | join type=left metric_id [
+            lookuptable lu_stat_metric_info
+            | eval type_metric_id = field( concat( "metric_by_", lower($("inst_product_type"))))
+            | search isnotnull(type_metric_id)
+            | fields metric_id, stat_type, type_metric_id
+     ]
+    | search isnull($("inst_product_type")) or (isnotnull($("inst_product_type")) and isnotnull(type_metric_id))
+    | rename type as lu_dm_type, metric_id as name 
+    | eval lu_dm_flag = true 
+    | fields name, lu_dm_flag
+ ]
+| eval confirmation_request = if(isnull(lu_dm_flag), name, null),
+   stat_func = case( name=="disk_*", concat( "first(", name, ") as ", name),
+										concat( "avg(", name, ") as ", name ) ), 
+		stat_func_etc = case( name=="disk_usage", concat( "first(disk_partition) as disk_partition" ), null), 
+        stat_field = concat( "\t", stat_func, if(isnull(stat_func_etc), null, concat(", ", stat_func_etc)) )
+| fields - stat_func, stat_max
+| eval eval_nvl = concat( "\t", name, " = nvl( ", name, ", 0 )" )
+| eval eval_floor = concat( "\t", name, " = floor( ", name, ", $(\"floor_decimal\") )" )
+| stats values(confirmation_request) as confirmation_request, 
+        values(stat_field) as stat_field, 
+        values(eval_nvl) as eval_nvl, 
+        values(eval_floor) as eval_floor
+
+| # import_table : DM 테이블 import 구문, result_cep : DM 저장 결과 CEP 처리 구문
+| eval setq_last_time = concat( "| # 마지막 저장 일시 조회\n| setq [ table duration=10m ", concat($("module"), "_", $("inst_type")),"\n",
+                      "\t| search system_id == ", $("system_id"), if( isnull($("inst_product_type")), "\n"," and inst_product_type = $(\"inst_product_type\")\n" ),
+                      "\t| stats max(_time) as last_time\n",
+                      "\t| eval last_time = nvl(last_time, datetrunc(dateadd(now(), \"min\", -10), \"1m\"))\n",
+                      "\t| fields last_time ]" ),
+    source_table = concat( "| set inst_type = \"", $("inst_type"), "\"",
+            if( isnull($("inst_product_type")), "", concat( "| set inst_product_type = \"", $("inst_product_type"), "\"") ),
+												"\n| set from_date=datetrunc(dateadd(now(), \"min\", -4), \"1m\") \n| set to_date=datetrunc(now(), \"1m\")",
+												"\n| table from=$(\"from_date\") to=$(\"to_date\") dl__", replace($("module"), "exem_aiops_", ""), "_", $("inst_type") ),
+		stat_field = concat( "| # 1분 통계 처리\n| eval _time = datetrunc(_time, \"1m\")\n",
+        									"| stats \n", strjoin( ", \n", stat_field), "\n    by _time, system_id, _target", "\n| # [ stat_exception_1 ]" ),
+    eval_nvl = concat( "| # 결측치 처리\n| eval ", strjoin(", \n", eval_nvl) ),
+		eval_floor = concat( "| # 소수점 치리\n| set floor_decimal = 2\n", "| eval time = str(_time, \"yyyy-MM-dd HH:mm:ss\"),\n", strjoin(", \n", eval_floor) ),
+		eval_last = concat( "| eval inst_type=nvl(inst_type, $(\"inst_type\"))" ),
+    search_last_time = concat( "| search _time > $(\"last_time\")" ),
+    import_table = concat( "| import ", $("module"), "_", $("inst_type") ),
+		result_cep = concat( "| # evtctx - ", $("module"), "_", $("inst_type"),
+                                    "\n| fields _time, system_id, _target, inst_type",
+                                    "\n| stats count by _time, system_id, _target, inst_type",
+                                    "\n| eval module = \"", $("module"), "\", inst_type = nvl(inst_type, $(\"inst_type\")), key= concat( module, \"_\", inst_type, \"_\", _target)",
+                                    "\n| evtctxadd key=key topic=\"mart_result\" maxrows=10 isnotnull(_target)" ),
+    confirmation_request = if(len(confirmation_request)>0, concat( "| # 점검 필요 지표 - ", strjoin( ", ", confirmation_request) ), null)
+
+| # 출력 query_string, query_name 조합
+| eval query_string = "# 아래 쿼리로 DM을 저장하세요.(쿼리 출처 : 90_gen_dm_import_anls)",
+        query_string = concat( query_string, "\n", confirmation_request, "\n\n", setq_last_time, "\n" ),
+        query_string = concat( query_string, source_table, "\n\n| # [ exception_1 ]\n\n", stat_field, "\n\n", eval_nvl, "\n\n", eval_floor, "\n\n", 
+                                "| # [ exception_2 ]\n\n", search_last_time, "\n", eval_last, "\n\n", import_table, "\n\n", result_cep ),
+        query_string = if( len(stat_field)>0, query_string, "!!!프로시저 처리 오류거나 매개변수 입력 오류로 확인 필요!!!"),
+        query_name = if( isnotnull($("inst_product_type")), concat(replace($("tab_name"), "dl__", "33_sj_dm__"), "_", $("inst_product_type")), replace($("tab_name"), "dl__", "33_sc_dm__"))
+| # exception_1/comment_1 : 최상단 예외처리용 쿼리/주석
+| # stat_exception_1/stat_comment_1 : stat 구축 예외처리용 쿼리/주석
+| # exception_2/comment_2 : 최하단 예외처리용 쿼리/주석
+| eval _table = $("tab_name")
+| lookup lu_gen_dm_import_query _table output comment_1, exception_1, stat_comment_1, stat_exception_1, comment_2, exception_2
+| # query_string : import쿼리에 사용할 최종 결과물
+| eval query_string = if( isnotnull(exception_1), replace(query_string, "| # [ exception_1 ]", concat(comment_1, "\n", exception_1)), query_string)
+| eval query_string = if( isnotnull(stat_exception_1), replace(query_string, "\n| # [ stat_exception_1 ]", concat(", ", stat_exception_1, "\n", stat_comment_1)), query_string)
+| eval query_string = if( isnotnull(exception_2), replace(query_string, "| # [ exception_2 ]", concat(comment_2, "\n", exception_2)), query_string)
+| order query_name, query_string

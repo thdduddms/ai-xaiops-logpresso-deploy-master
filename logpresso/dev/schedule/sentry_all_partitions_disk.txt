@@ -1,0 +1,15 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+sentry | fields disks, host_name, _time 
+| eval 
+		disks=string(disks), 
+        disks = replace(replace(replace(replace(replace(disks, "{", ""), "}",""),"[", ""), "]", "")," ",""), 
+        disks = replace(disks, ",path=", "&path="),
+        disks = split(disks, "&") 
+| json "{}"  | eval disk = disks | explode disk | fields disk, host_name, _time | search isnotnull(host_name)
+| eval disk = concat(replace(replace(split(disk, "," ), "[",""),"]", ""), concat(", target_id=" , host_name))
+| parsekv field=disk pairdelim="," 
+| eval _time = datetrunc(now(), "1m"), total=long(total), available = long(available), used = long(used), disk_usage = nvl(round(used/total * 100,1),0)
+| search isnotnull(path) | fields _time, path, total, available, used, target_id, disk_usage
+| import sentry_disk_all_partitions_1m_resource

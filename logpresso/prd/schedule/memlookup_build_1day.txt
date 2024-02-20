@@ -1,0 +1,12 @@
+실행 주기 : 50 23 * * *
+경보 사용 : null
+
+proc lookup_log_meta_info() | # 신규 로그 meta 정보 업데이트
+| proc lookup_log_logger_info() | # 로그이상탐지 수집설정 정보 (system_id[guid]category.log_file_name)
+| proc lookup_xaiops_module_meta() | # XAIOps module 메타정보
+| proc z_xaiops_relation_infra() | # XAIOps 관리자 모니터링
+| proc z_xaiops_relation_instance() | # XAIOps 관리자 모니터링
+| proc z_xaiops_relation_service() | # XAIOps 관리자 모니터링
+| # 수집기에서 빌드 proc lookup_api_call_service_alive() | # XAIOps 관리자 모니터링 - /external/clt/service 서버API 호출
+
+

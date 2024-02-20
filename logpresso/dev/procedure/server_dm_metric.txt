@@ -1,0 +1,35 @@
+파라미터 : [string module, string inst_type]
+설명 : 설정 > 학습/서비스 > 수집지표 > DM 메트릭 조회 (데이터형이 int, long, double만, log 타입은 msg(string) 리턴 )
+
+# set module = "exem_aiops_anls_inst" | # set inst_type = "db"
+| # weight : 1(낮음), 2(중간), 3(높음)
+| set tab_name = case( "exem_aiops_anls_service_service" == concat($("module"),"_",$("inst_type")), "exem_aiops_anls_inst_code",
+										"exem_aiops_anls_sys_2-tier" == concat($("module"),"_",$("inst_type")), "exem_aiops_anls_sys_2tier",
+                                        "exem_aiops_anls_log_log" == concat($("module"),"_",$("inst_type")), "exem_aiops_anls_log*",
+                                        concat($("module"),"_",$("inst_type")) ) 
+| lookuptable lu_dm_metric 
+| search inst_type==$("inst_type") | # fields key, inst_type, metric_id 
+| eval  module = $("module"), inst_type = $("inst_type"), table = $("tab_name") 
+| lookup lu_stat_metric_info metric_id output metric_by_oracle, metric_by_tibero, metric_by_postgres 
+| eval
+		is_oracle = if(isnotnull(metric_by_oracle), "oracle", null),
+        is_tibero = if(isnotnull(metric_by_tibero), "tibero", null),
+        is_postgres = if(isnotnull(metric_by_postgres), "postgres", null) 
+| eval
+	inst_product_type = split(replace(replace(replace(replace(str(array(is_oracle, is_tibero, is_postgres)), ",null", ""), "null,","") , "[", ""), "]", ""), ",") 
+| explode inst_product_type 
+| eval inst_product_type =upper( if($("inst_type")=="db",   inst_product_type, null)),
+    inst_product_type=if(inst_product_type=="NULL", null, inst_product_type) 
+| fields module, inst_type, metric_id, metric_desc, unit, weight, property, inst_product_type,table	
+
+| # [result_fields[ 
+module || string || not null
+inst_type || string || not null
+metric_id || string || not null
+metric_desc || string || not null
+unit || string || not null
+weight || string || not null
+property || string || not null
+inst_product_type || object || null
+table || string || not null
+| # ]result_fields]

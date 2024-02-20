@@ -1,0 +1,23 @@
+파라미터 : [int radar_id, string from, string to]
+설명 : 부하패턴 분석 화면 > Detail 메뉴 radar_id 전달시 sql_text(쿼리문) 정보 리턴
+
+ # set from=if(isnull($("from")), str(ago("2d"), "yyyyMMdd"), $("from"))
+|# set to=if(isnull($("to")), str(ago("1d"), "yyyyMMdd"), $("to")) |# from=null 비허용으로 인해 불필요
+| table from=$("from") to=$("to") apm_sql_list | fields seq, sql_uid, sql_text
+| join type=right sql_uid [
+	dbquery ai_server select radar_id, detail from aiops_module_wclst_radar where radar_id = :radar_id
+	| parsejson overlay=t field=detail 
+	| fields - detail 
+	| eval sql_uid=unique(sql_uid)
+	| explode sql_uid ]
+| stats count by radar_id, sql_uid, seq, sql_text
+| eval empty_message="empty_query"
+| eval sql_text = if( isnull(sql_text), empty_message, sql_text)
+| stats array(sql_text) as sql_text by sql_uid, radar_id
+| eval sql_text=strjoin( "", sql_text) 
+
+| # [result_fields[
+sql_uid || string || null
+radar_id || string || not null
+sql_text || string || not null
+| # ]result_fields]

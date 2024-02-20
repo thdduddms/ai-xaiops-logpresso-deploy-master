@@ -1,0 +1,22 @@
+실행 주기 : 0 1 * * *
+경보 사용 : null
+
+set from=datetrunc(dateadd(now(), "day", -1), "1d") 
+| set to=datetrunc(dateadd(now(), "day", 0), "1d")
+| set floor_decimal =2
+
+| table from=$("from") to=$("to") exem_aiops_fcst_code
+| eval _time = datetrunc(_time, "1d")
+| stats avg(elapse01_avg) as elapse01_avg, avg(elapse01_max) as elapse01_max, avg(elapse02_avg) as elapse02_avg, avg(elapse02_max) as elapse02_max, avg(elapse04_avg) as elapse04_avg, avg(elapse04_max) as elapse04_max, avg(elapse_avg) as elapse_avg, avg(elapse_max) as elapse_max, avg(error_count) as error_count, avg(exec_count) as exec_count, avg(node_count) as node_count, avg(total_elapse_time) as total_elapse_time
+        by _time,  _target, system_id
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss")
+       , elapse01_avg=floor(elapse01_avg, $("floor_decimal")), elapse01_max=floor(elapse01_max, $("floor_decimal")), elapse02_avg=floor(elapse02_avg, $("floor_decimal")), elapse02_max=floor(elapse02_max, $("floor_decimal")), elapse04_avg=floor(elapse04_avg, $("floor_decimal")), elapse04_max=floor(elapse04_max, $("floor_decimal")), elapse_avg=floor(elapse_avg, $("floor_decimal")), elapse_max=floor(elapse_max, $("floor_decimal")), error_count=floor(error_count, $("floor_decimal")), exec_count=floor(exec_count, $("floor_decimal")), node_count=floor(node_count, $("floor_decimal")), total_elapse_time=floor(total_elapse_time, $("floor_decimal"))
+| eval target_id=_target
+| fields _time, time, system_id, _target, target_id, elapse01_avg, elapse01_max, elapse02_avg, elapse02_max, elapse04_avg, elapse04_max, elapse_avg, elapse_max, error_count, exec_count, node_count, total_elapse_time
+| import exem_aiops_lngtrm_fcst_code
+
+| # evtctx 
+| fields _time, system_id, _target
+| stats count by _time, system_id, _target
+| eval module = "exem_aiops_lngtrm_fcst", target_type = "service", key= concat(module, "_", target_type, "_", _target)
+| evtctxadd key=key topic="mart_result" maxrows=10 isnotnull(_target)

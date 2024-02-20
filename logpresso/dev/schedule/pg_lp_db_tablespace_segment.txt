@@ -1,0 +1,25 @@
+실행 주기 : 20 0 * * *
+경보 사용 : null
+
+# 수집 설정 :: 수집 주기 = 60초 / 수집 시간 범위 = 00:00 ~ 00:05
+| set from = datetrunc(dateadd(now(), "day", -1), "1d")
+| set to = datetrunc(now(), "1d")
+| table from=$("from") to=$("to")  ora_segment
+| # segment 단위는 byte, tablespace  단위는 MB 
+| eval  
+	segment_used = byte/pow(1024,2), 
+	partition_name=if( len(partition_name)==0, null, partition_name)
+| fields _time, system_id, _target, tablespace_name, segment_name, segment_type, segment_used, owner, partition_name
+| sort _time, system_id, _target, tablespace_name
+
+| # XAIOps 대상만 필터링 하기
+| eval 
+	inst_type = nvl(inst_type, "db"),
+	key = concat(system_id, "|", inst_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)
+| fields - key, enable
+
+ | rename system_id as sys_id, _target as db_target_id, _time as time, owner as segment_owner
+
+| dboutput ai_server batchsize=2000 rowretry=f stoponfail=t table=lp_db_tablespace_segment time, sys_id, db_target_id, tablespace_name, segment_owner,segment_type, segment_name, segment_used, partition_name

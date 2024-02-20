@@ -1,0 +1,22 @@
+실행 주기 : 0 1 * * *
+경보 사용 : null
+
+set from=datetrunc(dateadd(now(), "day", -1), "1d") 
+| set to=datetrunc(dateadd(now(), "day", 0), "1d")
+| set floor_decimal =2
+
+| table from=$("from") to=$("to") exem_aiops_anls_inst_was
+| eval _time = datetrunc(_time, "1d")
+| stats avg(active_db_sessions) as active_db_sessions, avg(active_txns) as active_txns, avg(jvm_cpu_usage) as jvm_cpu_usage, avg(jvm_gc_count) as jvm_gc_count, avg(jvm_gc_time) as jvm_gc_time, avg(jvm_heap_usage) as jvm_heap_usage, avg(jvm_thread_count) as jvm_thread_count, avg(open_file_count) as open_file_count, avg(open_socket_count) as open_socket_count, avg(os_cpu) as os_cpu, avg(request_rate) as request_rate, avg(response_time) as response_time, avg(sql_elapse) as sql_elapse, avg(sql_exec_count) as sql_exec_count, avg(sql_fetch_count) as sql_fetch_count, avg(sql_prepare_count) as sql_prepare_count, avg(tps) as tps
+        by _time,  _target, system_id
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss")
+       , active_db_sessions=floor(active_db_sessions, $("floor_decimal")), active_txns=floor(active_txns, $("floor_decimal")), jvm_cpu_usage=floor(jvm_cpu_usage, $("floor_decimal")), jvm_gc_count=floor(jvm_gc_count, $("floor_decimal")), jvm_gc_time=floor(jvm_gc_time, $("floor_decimal")), jvm_heap_usage=floor(jvm_heap_usage, $("floor_decimal")), jvm_thread_count=floor(jvm_thread_count, $("floor_decimal")), open_file_count=floor(open_file_count, $("floor_decimal")), open_socket_count=floor(open_socket_count, $("floor_decimal")), os_cpu=floor(os_cpu, $("floor_decimal")), request_rate=floor(request_rate, $("floor_decimal")), response_time=floor(response_time, $("floor_decimal")), sql_elapse=floor(sql_elapse, $("floor_decimal")), sql_exec_count=floor(sql_exec_count, $("floor_decimal")), sql_fetch_count=floor(sql_fetch_count, $("floor_decimal")), sql_prepare_count=floor(sql_prepare_count, $("floor_decimal")), tps=floor(tps, $("floor_decimal"))
+| eval target_id=_target
+| fields _time, time, system_id, _target, target_id, active_db_sessions, active_txns, jvm_cpu_usage, jvm_gc_count, jvm_gc_time, jvm_heap_usage, jvm_thread_count, open_file_count, open_socket_count, os_cpu, request_rate, response_time, sql_elapse, sql_exec_count, sql_fetch_count, sql_prepare_count, tps
+| import exem_aiops_lngtrm_fcst_was
+
+| # evtctx 
+| fields _time, system_id, _target
+| stats count by _time, system_id, _target
+| eval module = "exem_aiops_lngtrm_fcst", target_type = "was", key= concat(module, "_", target_type, "_", _target)
+| evtctxadd key=key topic="mart_result" maxrows=10 isnotnull(_target)

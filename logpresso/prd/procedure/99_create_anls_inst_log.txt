@@ -1,0 +1,12 @@
+파라미터 : [string from, string to]
+설명 : (임시) 로그 예측 CSV 파일 생성
+
+table from=$("from") to=$("to") exem_aiops_anls_inst_log
+| eval time = str(_time, "yyyy-MM-dd HH:mm.SSS")
+ | rename _target as target_id
+| eval debug= nvl(debug, 0), error=nvl(error, 0), info=nvl(info, 0), warn=nvl(warn, 0), fatal=nvl(fatal, 0),  trace=nvl(trace, 0),  cretical=nvl(cretical, 0), none=nvl(none,0)
+| order _time, time, system_id, target_id, total, trace, debug, error, info,  warn, fatal, cretical
+| fields _time, time, system_id, target_id, total, trace, debug, error, info,  warn, fatal, cretical
+| sort time, system_id, target_id
+| # outputcsv   partition=t script/test/anls_inst_log/anls_inst_log_{logtime:yyyyMMddHHmm}.csv time, system_id, target_id, total, trace, debug, error, info,  warn, fatal, cretical
+| outputcsv   partition=t script/test/anls_inst_log/anls_inst_log_{now:yyyyMMddHHmm}.csv time, system_id, target_id, total, trace, debug, error, info,  warn, fatal, cretical

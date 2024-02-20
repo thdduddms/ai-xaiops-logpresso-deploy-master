@@ -1,0 +1,77 @@
+파라미터 : [int system_id, string inst_type, string target_ids, string metrics, string from, string to]
+설명 : apdex 세부 정보 확인 (타입 통합)
+
+ # Apdex 점수 관련 세부 내용을 표현하기 위한 데이터 리턴 **
+|# 서비스는 1분치 데이터로 apdex 점수 계산 / 그 외는 10분치 데이터로 apdex 점수 계산
+| set from= case( $("inst_type") == "service", $("from"), dateadd( date($("from"), "yyyyMMddHHmm"), "min", -9))
+
+|# 조회 기간 중에 apdex 기준이 변경되었다면 array로 저장
+| setq [ 
+	table from=$("from") to=$("to") meta_apdex_stat_config
+	| eval _time = datetrunc(_time, "1s") 
+	| stats count by _time
+	| stats array(_time) as time ]
+
+| set table_name = case( 
+				in( $("inst_type"), "db", "was", "tp", "web"), "apdex_mart_instance_raw", 
+                $("inst_type") == "os", "apdex_mart_infra_raw", 
+                $("inst_type") == "service", "apdex_mart_service_raw", null)
+| table from=$("from") to=$("to") $("table_name")
+| search system_id == $("system_id")
+| fields _time, target_id, metric1, metric1v, metric2, metric2v, metric3, metric3v, metric4, metric4v, metric5, metric5v, sat ,fru
+
+|# 다중 target_id 및 metric 조회
+| join target_id [ 
+	json "{}" 
+    | eval target_id = split( $("target_ids"), ",") 
+    | explode target_id 
+	| eval metric = split($("metrics"),  ",")
+	| explode metric  ]
+
+|# 조회 기간 전까지 가장 최근 기준값을 조회하여 조인
+| join type=left target_id [ 
+	set start = dateadd( date($("from"), "yyyyMMddHHmm"), "day", -1)
+	| table from=$("start") to=$("from") meta_apdex_stat_config
+    | search system_id == $("system_id")
+	| sort limit=1 -_time by target_id 
+	| fields satisfied1, satisfied2, satisfied3, satisfied4, satisfied5, frustrated1, frustrated2, frustrated3, frustrated4, frustrated5, target_id 
+]
+
+|# 조회 기간 중 기준 값이 변경된 경우 변경된 시간 조회하여 조인 (최대 6번 변경까지 반영 가능) 
+| eval changed_time = foreach( if( datetrunc(_1, "1s") <= _time, _1, null), $("time"))
+| eval changed_time = max( valueof(changed_time, 0), valueof(changed_time, 1), 
+											valueof(changed_time, 2), valueof(changed_time, 3), valueof(changed_time, 4), 
+                                            valueof(changed_time, 5), valueof(changed_time, 6))
+| join type=left target_id, changed_time [
+	table from=$("from") to=$("to") meta_apdex_stat_config 
+    | search system_id == $("system_id")
+	| rename _time as changed_time 
+    | eval changed_time = datetrunc(changed_time, "1s") ]
+
+|# 몇번째 기준인지 확인하여 실제값(value), 만족/불만족 기준, 만족/불만족 건수 조회
+| eval index= int(case( metric==metric1, 1, 
+								metric == metric2, 2, 
+                                metric == metric3, 3, 
+                                metric == metric4, 4, 
+                                metric == metric5, 5)) 
+| eval 
+		value = field(concat( "metric",index, "v")), sat_count = valueof(sat, int(index-1)), 
+        fru_count = valueof(fru, int(index-1)), time = string(_time, "yyyy-MM-dd HH:mm:ss"), 
+        satisfied= field( concat( "satisfied", index)), frustrated= field( concat( "frustrated", index))
+| search isnotnull(value)
+
+|# 마무리
+| rename metric as field
+| fields time, field, value, sat_count, fru_count, target_id, satisfied, frustrated
+| sort target_id, field, time
+
+| # [ result_fields[
+time || string || not null
+field || string || not null
+value || double || not null
+sat_count || int || not null
+fru_count || int || not null
+target_id || string || not null
+satisfied || double || not null 
+frustrated || double || not null
+| # ]  result_fields ] ] 

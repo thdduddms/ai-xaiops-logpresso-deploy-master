@@ -1,0 +1,4 @@
+파라미터 : []
+설명 : 관리자용] 프로시저 목록 조회
+
+confdb docs araqne-logdb procedures | fields name, query_string, parameters

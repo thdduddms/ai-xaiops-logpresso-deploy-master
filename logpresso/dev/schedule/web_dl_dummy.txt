@@ -1,0 +1,46 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+set from=datetrunc(dateadd(now(), "min", -8), "1m")
+| set to=datetrunc(dateadd(now(), "min", -4), "1m")
+| table from=$("from") to=$("to") xapm_jvm_stat_summary
+| eval _time = datetrunc(now(), "1m"), active_txns = rand(10), active_txns_max = rand(10), active_txns_min = rand(10), active_txns_sum = rand(10),
+			client_count = rand(15), client_count_max = rand(10), client_count_min = rand(10), client_count_sum = rand(10), code_100 = rand(10)
+            , code_200 = rand(10), code_300 = rand(10), code_400 = rand(10), code_500 = rand(10), count = rand(10), elapsed_time = rand(15), 
+            elapsed_critical = rand(10), elapsed_critical_max = rand(15), elapsed_critical_min = rand(10), elapsed_warning = rand(10), elapsed_warning_max = rand(10), error_count = code_400 + code_500,
+            elapsed_warning_min = rand(10), elapsed_normal = rand(15), elapsed_normal_max = rand(15), elapsed_normal_min = rand(10), txn_end_count = rand(10), 
+            txn_end_count_max = rand(10), txn_end_count_min = rand(15), txn_end_count_sum = rand(10)
+| fields _time, target_id, active_txns, active_txns_max, active_txns_min, active_txns_sum,
+			client_count, client_count_max, client_count_min, client_count_sum, error_count, code_100, code_200, code_300,
+            code_400, code_500, count, elapsed_time, elapsed_critical, elapsed_critical_max, elapsed_critical_min,
+            elapsed_warning, elapsed_warning_max, elapsed_warning_min, elapsed_normal, elapsed_normal_max,
+            elapsed_normal_min, txn_end_count, txn_end_count_max, txn_end_count_min, txn_end_count_sum, system_id, time
+| union [
+table from=$("from") to=$("to") xapm_jvm_stat_summary
+| eval _time = datetrunc(now(), "1m"), active_txns = rand(10), active_txns_max = rand(10), active_txns_min = rand(10), active_txns_sum = rand(10),
+			client_count = rand(10), client_count_max = rand(10), client_count_min = rand(10), client_count_sum = rand(10), code_100 = rand(10)
+            , code_200 = rand(10), code_300 = rand(10), code_400 = rand(10), code_500 = rand(10), count = rand(10), elapsed_time = rand(10), 
+            elapsed_critical = rand(10), elapsed_critical_max = rand(10), elapsed_critical_min = rand(10), elapsed_warning = rand(10), elapsed_warning_max = rand(10), error_count = code_400 + code_500,
+            elapsed_warning_min = rand(10), elapsed_normal = rand(10), elapsed_normal_max = rand(10), elapsed_normal_min = rand(10), txn_end_count = rand(10), 
+            txn_end_count_max = rand(10), txn_end_count_min = rand(10), txn_end_count_sum = rand(10)
+| fields _time, target_id, active_txns, active_txns_max, active_txns_min, active_txns_sum,
+			client_count, client_count_max, client_count_min, client_count_sum, error_count, code_100, code_200, code_300,
+            code_400, code_500, count, elapsed_time, elapsed_critical, elapsed_critical_max, elapsed_critical_min,
+            elapsed_warning, elapsed_warning_max, elapsed_warning_min, elapsed_normal, elapsed_normal_max,
+            elapsed_normal_min, txn_end_count, txn_end_count_max, txn_end_count_min, txn_end_count_sum, system_id, time]
+| union [
+table from=$("from") to=$("to") xapm_jvm_stat_summary
+| eval _time = datetrunc(now(), "1m"), active_txns = rand(10), active_txns_max = rand(10), active_txns_min = rand(10), active_txns_sum = rand(10),
+			client_count = rand(10), client_count_max = rand(10), client_count_min = rand(10), client_count_sum = rand(10), code_100 = rand(10)
+            , code_200 = rand(10), code_300 = rand(10), code_400 = rand(10), code_500 = rand(10), count = rand(10), elapsed_time = rand(10), 
+            elapsed_critical = rand(10), elapsed_critical_max = rand(10), elapsed_critical_min = rand(10), elapsed_warning = rand(10), elapsed_warning_max = rand(10), error_count = code_400 + code_500,
+            elapsed_warning_min = rand(10), elapsed_normal = rand(10), elapsed_normal_max = rand(10), elapsed_normal_min = rand(10), txn_end_count = rand(10), 
+            txn_end_count_max = rand(10), txn_end_count_min = rand(10), txn_end_count_sum = rand(10)
+| fields _time, target_id, active_txns, active_txns_max, active_txns_min, active_txns_sum,
+			client_count, client_count_max, client_count_min, client_count_sum, error_count, code_100, code_200, code_300,
+            code_400, code_500, count, elapsed_time, elapsed_critical, elapsed_critical_max, elapsed_critical_min,
+            elapsed_warning, elapsed_warning_max, elapsed_warning_min, elapsed_normal, elapsed_normal_max,
+            elapsed_normal_min, txn_end_count, txn_end_count_max, txn_end_count_min, txn_end_count_sum, system_id, time
+]
+| eval target_id = "web01", system_id = 102,  time = string(_time, "yyyy-MM-dd HH:mm:ss")
+| import web_dl

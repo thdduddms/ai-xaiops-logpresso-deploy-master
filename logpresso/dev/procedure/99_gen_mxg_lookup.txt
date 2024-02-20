@@ -1,0 +1,28 @@
+파라미터 : [string MFO_profile, string MFT_profile]
+설명 : mxg의 stat_name / event_name을 csv로 내리는 프로시저
+
+ dbquery $("MFO_profile")  select curr_val_flag, db_id, event_id, event_name, event_version, unit, wait_class, wait_class_no from ora_event_name 
+| eval key = concat(db_id, "|", event_id, "|", event_version) 
+| outputcsv /home/aic1/logpresso/lookup/ora_event_name_oracle.csv key, curr_val_flag, db_id, event_id, event_name, event_version, unit, wait_class, wait_class_no 	
+| drop
+
+| dbquery $("MFO_profile") select db_id, stat_id, stat_name, class, unit, curr_val_flag, stat_version from ora_stat_name 
+| eval key = concat(db_id, "|", stat_id, "|", stat_version) 
+| outputcsv /home/aic1/logpresso/lookup/ora_stat_name_oracle.csv key, db_id, stat_id, stat_name, class, unit, curr_val_flag, stat_version
+| drop
+
+| dbquery $("MFT_profile")  select curr_val_flag, db_id, event_id, event_name, event_version, unit, wait_class, wait_class_no from ora_event_name 
+| eval key = concat(db_id, "|", event_id, "|", event_version) 
+| outputcsv /home/aic1/logpresso/lookup/ora_event_name_tibero.csv key, curr_val_flag, db_id, event_id, event_name, event_version, unit, wait_class, wait_class_no 	
+| drop
+
+| dbquery $("MFT_profile") select db_id, stat_id, stat_name, class, unit, curr_val_flag, stat_version from ora_stat_name 
+| eval key = concat(db_id, "|", stat_id, "|", stat_version) 
+| outputcsv /home/aic1/logpresso/lookup/ora_stat_name_tibero.csv key, db_id, stat_id, stat_name, class, unit, curr_val_flag, stat_version
+| drop
+ 
+|# 이후 엔진 접속하여 아래 명령어 실행
+|# logdb.loadCsvLookup /home/aic1/logpresso/lookup/ora_stat_name_oracle.csv
+|# logdb.loadCsvLookup /home/aic1/logpresso/lookup/ora_stat_name_tibero.csv
+|# logdb.loadCsvLookup /home/aic1/logpresso/lookup/ora_event_name_oracle.csv
+|# logdb.loadCsvLookup /home/aic1/logpresso/lookup/ora_event_name_tibero.csv

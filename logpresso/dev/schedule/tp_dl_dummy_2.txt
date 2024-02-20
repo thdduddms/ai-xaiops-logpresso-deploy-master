@@ -1,0 +1,8 @@
+실행 주기 : 2 * * * *
+경보 사용 : null
+
+json "{}" | repeat count=10
+| eval _time = datetrunc(now(), "1m"), qcount_sum = rand(1000), qcount_avg = rand(1000), count_sum = rand(1000), count_avg = rand(600), elapsed_sum  =rand(1000), elapsed_avg = rand(600), error_count = rand(400), emcount_sum = rand(1000), emcount_avg = rand(600), qpcount_sum = rand(1000), qpcount_avg = rand(600), cq_count_avg = rand(600), cq_count_sum = rand(1000), q_elapsed_avg = rand(600), q_elapsed_sum = rand(1000), status_rdy = rand(1000), status_nrdy = rand(1000), fail_count = rand(1000)
+| fields _time, target_id, qcount_sum, qcount_avg, count_sum, count_avg,elapsed_sum, elapsed_avg, error_count, fail_count, emcount_sum, emcount_avg, qpcount_sum , qpcount_avg, cq_count_avg, cq_count_sum, q_elapsed_avg, q_elapsed_sum, status_rdy, status_nrdy, system_id, time
+| eval target_id = "tp01", system_id = 102,  time = string(_time, "yyyy-MM-dd HH:mm:ss")
+| import tp_dl

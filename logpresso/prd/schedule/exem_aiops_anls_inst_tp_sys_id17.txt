@@ -1,0 +1,14 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+setq [ table duration=10m exem_aiops_anls_inst_tp
+		| search system_id==17
+        | stats max(_time) as last_time
+        | eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+        | fields last_time ]
+| set from=datetrunc(dateadd(now(), "min", -6), "1m")
+| set to=datetrunc(dateadd(now(), "min", -2), "1m")
+| table from=$("from") to=$("to") exem_aiops_anls_inst_tp
+| search _time > $("last_time")
+| eval system_id=17, target_id="tp_17", _target = target_id
+| import exem_aiops_anls_inst_tp 

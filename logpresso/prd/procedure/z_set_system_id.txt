@@ -1,0 +1,5 @@
+파라미터 : []
+설명 : 대시보드 > system id 테이블 생성
+
+json "[{ 'system_id' : 2}]"
+| import z_xaiops_system_id

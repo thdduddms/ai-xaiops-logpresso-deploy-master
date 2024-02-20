@@ -1,0 +1,16 @@
+파라미터 : [int system_id, string target_id, string stats_type, string from, string to]
+설명 : 모니터링 > 서비스 모니터링 > "WAS 인스턴스별 수행시간" 선택 차트
+
+# 모니터링 > 서비스 모니터링 > WAS 인스턴스별 수행시간 차트 **
+| proc server_service_monitoring_was_elapse_xview($("system_id"), $("target_id"), $("from"), $("to"))
+| eval time = datetrunc(_time, "1m") 
+| stats avg(txn_elapse) as avg_txn_elapse, sum(txn_elapse) as sum_txn_elapse, count as txn_count by time, txn_id, was_id
+| eval txn_elapse = floor(field(concat($("stats_type"), "_txn_elapse")), 4)
+| pivot last(txn_elapse) rows time cols was_id
+| eval time =string(time, "yyyy-MM-dd HH:mm:ss")
+| sort time
+
+| # [result_fields[
+time || string || not null
+{매개변수로 받은 거래코드를 호출한 was_id명} || double || not null
+| # ]result_fields]

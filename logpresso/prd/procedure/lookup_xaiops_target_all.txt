@@ -1,0 +1,26 @@
+파라미터 : []
+설명 : XAIOps 전체 대상
+
+dbquery ai_server 
+	select sys_id, 'infra' as apdex_type, target_id, 'os' as target_type, host_name as target_name, 
+    	null as inst_product_type, enable, false as total_service_enable  from xaiops_host
+	union all 
+    	select sys_id, 'instance' as apdex_type, target_id, inst_type as target_type, name as target_name, 
+        inst_product_type, enable, false as total_service_enable 
+        from xaiops_instance
+	union all 
+    	select sys_id, 'service' as apdex_type, tx_code as target_id, 'service' as target_type, tx_code_name as target_name, 
+        	null as inst_product_type, enable, total_service_enable 
+        from xaiops_service
+	union all 
+    	select sys_id, 'network' as apdex_type, target_id, 'network' as target_type, name as target_name, null as inst_product_type, 
+        	enable, false as total_service_enable  
+           from xaiops_network
+    union all 
+    	select sys_id, 'log' as apdex_type, target_id, 'log' as target_type, host_name as target_name, null as inst_product_type, 
+        	enable, false as total_service_enable  
+        from xaiops_log
+| rename sys_id as system_id, target_id as _target
+| eval key = concat(system_id, "|", target_type, "|", _target)
+| memlookup op=build name=lookup_xaiops_target_all key=key system_id, target_type, apdex_type, _target, target_name, inst_product_type, enable, total_service_enable
+| # total_service_enable  컬럼이 service말고 다른 테이블에 생기면 꼭 수정하자.

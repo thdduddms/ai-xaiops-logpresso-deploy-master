@@ -1,0 +1,21 @@
+파라미터 : [string from_day, string to_day]
+설명 : 설정 > 기타 > 라이선스(모아보기)
+
+# 로그프레소 일일 수집량 (모아보기) - 실제 logger 수집량과 dbqeury 수집량을 합산하여 제공 (패치전까지) **
+| # 필수!! sys_logger_stats, sys_table_trends 테이블 구조 변경 필요
+| # proc server_lp_license_usages("2021-12-01", "2021-12-31")
+| # [ set from = "2021-12-01" | set to = "2021-12-31" ]
+| proc server_lp_license_usages_self($("from_day"), $("to_day"))
+| # remote lp_prd [ proc server_lp_license_usages_self($("from_day"), $("to_day")) ] | # 같이 보고 싶은 서버 추가
+| stats sum(volume) as volume, sum(logger) as logger, sum(query) as query, array(volume) as arr_volume by time  | # 같이 보고 싶은 서버 추가
+| eval volume_mb = round(volume/pow(1024,2), 2) | # 같이 보고 싶은 서버 추가
+| fields time, volume, logger, query, arr_volume, volume_mb
+
+| # [result_fields[
+arr_volume || list || not null
+logger || long || not null
+query || long || not null
+time || string || not null
+volume || long || not null
+volume_mb || double || not null
+| # ]result_fields]

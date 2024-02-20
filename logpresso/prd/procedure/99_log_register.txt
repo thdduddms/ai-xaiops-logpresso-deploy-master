@@ -1,0 +1,18 @@
+파라미터 : [int seq]
+설명 : [미사용] 설정 > 시스템 > 로그, 로그 목록에 추가하기 위한 PG 쿼리 생성
+
+# [ 시스템 연동기능으로 대체
+#  PG xaiops_log 테이블에 insert하는 쿼리 생성 프로시저 **
+|# seq은 100 단위로 입력, 200 = 100~200번 조회, 300 = 200~300번 조회
+| # 고민 : PG 저장내용 비교하기
+| set seq = $("seq", 100)
+| set low = $("seq") - 100 
+| set low = if($("low") <=0, 0, $("seq")) 
+| proc lookup_log_logger_info() |# search isnotnull(file_dir) 
+| eval is_sentry = if(namespace_type == "sentry", "true", "false") 
+| eval q = concat( "insert into xaiops_log(sys_id, target_id, log_name, log_path, host_name, collect_type, is_sentry, log_category, \"enable\", is_collect, auto_training, \"desc\" ) values (", 
+system_id, ", '", _target, "','", _host, "','", file_dir, "', '", target_guid, "', '", factory_name, "', ", is_sentry, ", '", log_category, "', true, false, false, '", description, "');"   )  
+| eval sequence =seq() 
+| fields sequence, q 
+| search sequence >= $("low") and sequence < $("seq") 
+| stats values(q) as q | eval q =strjoin("\n", q)

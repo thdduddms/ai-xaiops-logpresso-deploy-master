@@ -1,0 +1,62 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+set system_id =$("system_id")
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(now(), "1m"))
+
+| table from=$("from") to=$("to") web_dl
+| eval _time = datetrunc(_time, "1m")
+| stats avg(active_txns) as active_txns, avg(active_txns_max) as active_txns_max, avg(active_txns_min) as active_txns_min, 
+			avg(active_txns_sum) as active_txns_sum, avg(client_count) as client_count, avg(client_count_max) as client_count_max,
+            avg(client_count_min) as client_count_min, avg(client_count_sum) as client_count_sum, avg(error_count) as error_count,
+            avg(code_100) as code_100, avg(code_200) as code_200, avg(code_300) as code_300, avg(code_400) as code_400,
+            avg(code_500) as code_500, avg(elapsed_time) as elapsed_time, avg(elapsed_critical) as elapsed_critical, avg(elapsed_critical_max) as elapsed_critical_max,
+            avg(elapsed_critical_min) as elapsed_critical_min, avg(elapsed_warning) as elapsed_warning, avg(elapsed_warning_max) as elapsed_warning_max,
+            avg(elapsed_warning_min) as elapsed_warning_min, avg(elapsed_normal) as elapsed_normal, avg(elapsed_normal_max) as elapsed_normal_max,
+            avg(elapsed_normal_min) as elapsed_normal_min, avg(txn_end_count) as txn_end_count, avg(txn_end_count_max) as txn_end_count_max,
+            avg(txn_end_count_min) as txn_end_count_min, avg(txn_end_count_sum) as txn_end_count_sum, avg(count) as count by _time
+| eval 
+		target_id = "web01", 
+        system_id = $("system_id"),
+        time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+		_target = target_id,
+        active_txns=floor(active_txns,4),
+        active_txns_max=floor(active_txns_max,4),
+        active_txns_min=floor(active_txns_min,4),
+        active_txns_sum=floor(active_txns_sum,4),
+        client_count=floor(client_count,4),
+        client_count_max=floor(client_count_max,4),
+        client_count_min=floor(client_count_min,4),
+        client_count_sum=floor(client_count_sum,4),
+        code_100=floor(code_100,4),
+        code_200=floor(code_200,4),
+        code_300=floor(code_300,4),
+        code_400=floor(code_400,4),
+        code_500=floor(code_500,4),
+        count=floor(count,4),
+        elapsed_critical=floor(elapsed_critical,4),
+        elapsed_critical_max=floor(elapsed_critical_max,4),
+        elapsed_critical_min=floor(elapsed_critical_min,4),
+        elapsed_normal=floor(elapsed_normal,4),
+        elapsed_normal_max=floor(elapsed_normal_max,4),
+        elapsed_normal_min=floor(elapsed_normal_min,4),
+        elapsed_time=floor(elapsed_time,4),
+        elapsed_warning=floor(elapsed_warning,4),
+        elapsed_warning_max=floor(elapsed_warning_max,4),
+        elapsed_warning_min=floor(elapsed_warning_min,4),
+        error_count=floor(error_count,4),
+        txn_end_count=floor(txn_end_count,4),
+        txn_end_count_max=floor(txn_end_count_max,4),
+        txn_end_count_min=floor(txn_end_count_min,4),
+        txn_end_count_sum=floor(txn_end_count_sum,4)
+        
+| search system_id== $("system_id")
+
+ 
+| # [  XAIOps 대상만 필터링 하기
+| eval target_type = nvl(inst_type, "web"),
+	key = concat(system_id, "|", target_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)
+| fields - key, enable  

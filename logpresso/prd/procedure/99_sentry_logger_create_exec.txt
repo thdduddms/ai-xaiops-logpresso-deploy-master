@@ -1,0 +1,16 @@
+파라미터 : [string os, string logger_name, string exec_cmd, string tab_name, string interval]
+설명 : 센트리용) "외부 명령 프로그램 실행" 수집 설정 일괄 생성 쿼리
+
+sentry
+| search lower(os) == lower($("os"))
+| fields guid
+| # eval host_tag=guid, factory_name="exec", name="hostnamectl_cmd", configs = dict("command", "hostnamectl"),  table_name="hostnamectl", interval=86400
+| # eval host_tag=guid, factory_name="exec", name="lscpu_cmd", configs = dict("command", "lscpu"),  table_name="lscpu", interval=86400
+| # eval host_tag=guid, factory_name="exec", name="uptime_cmd", configs = dict("command", "uptime"),  table_name="uptime", interval=6000
+| eval host_tag=guid, factory_name="exec", 
+	name=$("logger_name"), 
+    configs = dict("command", $("exec_cmd")),  
+    table_name=$("tab_name"), interval=$("interval")
+| sentry-logger-create
+| sentry-logger-connect
+| sentry-logger-start

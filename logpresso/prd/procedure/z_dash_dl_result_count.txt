@@ -1,0 +1,18 @@
+파라미터 : [datetime from, datetime to, string table_name]
+설명 : 대시보드 > DL 저장결과 > {제품분류} 테이블별 수집 건수
+
+# set table_name = "xapm_*"
+| # set table_name = "ora_*"
+| # set table_name = "sentry_*_resource"
+| set from = if( isnull($("from")), datetrunc(ago("10m"), "1m"), $("from"))
+| table from=$("from") to=$("to") $("table_name")
+| search not(in(_table, "")) | # 제외할 테이블명 하나씩 넣기
+| eval system_id = if($("table_name")=="sentry*", "sentry", system_id)
+| join type=inner system_id [
+	table z_xaiops_system_id
+    | eval system_id = if(isnull(int($("system_id"))), system_id, int($("system_id")))
+    | eval system_id = if($("table_name")=="sentry*", "sentry", system_id)
+	| fields system_id  ]
+| fields _time, _table
+| timechart span=1m count by _table 
+| search _time < datetrunc(now(), "1m")

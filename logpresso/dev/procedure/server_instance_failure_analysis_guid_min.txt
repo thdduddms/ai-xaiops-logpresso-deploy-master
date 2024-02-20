@@ -1,0 +1,33 @@
+파라미터 : [int system_id, string was_id, string from]
+설명 : 모니터링 > 인스턴스 장애분석 > 트랜잭션 목록 버튼
+
+# 인스턴스 장애분석 내 트랜잭션 목록 클릭시 리턴데이터  **
+| set from= datetrunc( date( $("from"), "yyyyMMddHHmm"), "1m")
+| set to= datetrunc( dateadd( $("from"), "min", 1), "1m")
+| table from=$("from") to=$("to") xapm_txn_detail
+| search first == 1
+| eval was_id = string(was_id)
+| search was_id == $("was_id") 
+| rename was_id as target_id 
+| stats count, avg(txn_elapse) as txn_elapse by target_id, guid, tid, tx_code
+| eval tx_code=str(tx_code)
+
+| join type=left tx_code [ dbquery intermax_intermax select tx_code, tx_code_name from xapm_tx_code_info ] 
+| join type=left txn_id [ dbquery intermax_intermax select txn_id, txn_name from xapm_txn_name ] 
+| eval tx_code_name = nvl(tx_code_name, txn_name)
+
+| eval _time = $("from"), time = string(_time, "yyyy-MM-dd HH:mm:ss"), 
+tx_code_name = nvl(tx_code_name, ""), txn_name = nvl(txn_name, "")
+| fields _time, guid,  target_id, txn_elapse, tid, time, txn_name, tx_code, tx_code_name
+
+| # [result_fields[
+_time || date || not null
+guid || string || null
+target_id || string || not null
+tid || string || null
+time || string || not null
+tx_code || string || not null
+tx_code_name || string || not null
+txn_elapse || double || not null
+txn_name || string || not null
+| # ]result_fields]

@@ -1,0 +1,12 @@
+파라미터 : [int system_id, string db_id, string inst_type]
+설명 : 인스턴스 별로 모니터링솔루션이 여러 개일때 솔루션명 리턴, 현재 DB만 적용
+
+table duration=10m exem_aiops_anls_inst_db
+| stats count by solution, db_id, system_id
+| eval inst_type="db"
+
+| search isnotnull(solution) and db_id==$("db_id")
+| search system_id==$("system_id") and inst_type==$("inst_type")
+| rename db_id as target_id
+
+| fields inst_type, target_id, solution, system_id 

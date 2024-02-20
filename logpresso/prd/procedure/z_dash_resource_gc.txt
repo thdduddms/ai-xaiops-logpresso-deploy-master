@@ -1,0 +1,7 @@
+파라미터 : [datetime from, datetime to]
+설명 : 대시보드 > 서버리소스 > GC 수행 소요시간
+
+ table duration=10m from=$("from") to=$("to") *:sys_gc_logs
+| fields - changes 
+| sort _time
+| timechart span=1s max(duration) by _node

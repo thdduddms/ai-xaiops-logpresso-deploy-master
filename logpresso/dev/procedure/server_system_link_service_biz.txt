@@ -1,0 +1,19 @@
+파라미터 : [int system_id, string inst_type]
+설명 : 설정 > 시스템 > 시스템 연동 >> 거래코드 <> 업무 main
+
+table duration=1d xapm_txn_detail
+| search first==1 and isnotnull(tx_code)
+| stats count, first(txn_id) as txn_id by tx_code
+| join txn_id [
+	dbquery intermax_intermax
+    select t1.business_id, t1.business_name, t2.txn_id
+    from xapm_business_info t1 join xapm_txn_name t2 on t1.business_id = t2.business_id
+]
+
+| rename business_id as biz_code, business_name as biz_name
+| # [result_fields[
+biz_code || string || not null
+biz_name || string || not null
+tx_code || string || not null
+| # ]result_fields]
+| fields biz_code, biz_name, tx_code

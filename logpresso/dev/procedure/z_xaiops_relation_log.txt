@@ -1,0 +1,11 @@
+파라미터 : []
+설명 : 로그이상탐지
+
+dbquery ai_server
+select a.sys_id as system_id, a.target_id, a.enable, c.host_group_id as group_id, d.host_group_name as group_name, b.host_name as pg_target_name
+	from xaiops_log a 
+	join xaiops_host b on a.host_id = b.host_id 
+	join xaiops_host_group_host_relation c on b.host_id=c.host_id 
+	join xaiops_host_group d on c.host_group_id=d.host_group_id 
+| eval key = concat(group_name, "_", target_id), group_type = "log", inst_type = "log"
+| memlookup op=build name=z_xaiops_relation_log key=key system_id, inst_type, target_id, enable, group_type, group_id, group_name, pg_target_name

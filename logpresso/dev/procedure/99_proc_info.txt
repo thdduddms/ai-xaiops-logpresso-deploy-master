@@ -1,0 +1,195 @@
+파라미터 : [string proc_name]
+설명 : 관리자용] 프로시저 정보 제공
+
+# 보편적이지 않은 파라미터의 경우 설명과 예시를 lu_proc_parameters에 등록하시면 매번 바꾸지 않고 사용할 수 있습니다.. **
+| set system_id = 102 |# system_id는 맞춰서 변경 ( 필요시 파라미터로 받아도 됨 )
+|# DM에 존재하는 타겟ID 가져오는 setq절
+| setq [ 
+table duration=20m exem_aiops_anls_inst_*,  exem_aiops_anls_sys_e2e_by_was | stats count by _target ,_table
+| sort limit=3 count by _table | eval type = replace( _table ,"(exem_aiops_anls_inst_)|(exem_aiops_fcst_)|(exem_aiops_anls_sys_)|(exem_aiops_anls_)", "", "re")
+| eval id = concat(type, "_id") 
+| stats array(_target) as _target by id | eval target_dict = dict(id, _target)
+| pivot first(_target) as _target cols id
+| eval target_dict = dict("db_id", db_id, "was_id", was_id, "code_id", code_id, "os_id", os_id, "tp_id", tp_id, "web_id", web_id, "network_id", network_id, "log_id", log_id, "e2e_by_was_id", e2e_by_was_id, "inst_type", $("inst_type"))
+| fields target_dict ]
+|# DM에 존재하는 필드 가져오는 setq절
+| setq [ 
+lookuptable lu_dm_metric
+| sort limit=3 metric_id by inst_type
+| stats array(metric_id) as metric_id by inst_type
+| pivot first(metric_id) as metric cols inst_type
+| eval metric_dict= dict( "code_metric", code, "db_metric", db, "log_metric", log, "network_metric", network, "os_metric", os, "service_metric", service, "tp_metric", tp, "was_metric", was, "web_metric", web)
+| fields metric_dict ]
+| set proc_name = if( isnull($("proc_name")), "", $("proc_name"))
+| confdb docs araqne-logdb procedures | fields name, parameters, description, query_string  
+|# 임시
+| search name == "server_*" and not(contains(query_string, "bypass", "사용안함")) and not(contains(name, "shinhan"))
+| search contains(name, $("proc_name")) 
+
+| eval result_fields = substr( query_string, indexof(query_string, "result_fields")), result_fields = if( indexof(query_string, "result_fields") == -1, null, result_fields) 
+| eval result_fields = subarray(split( result_fields, "\n"), 1, -1), result_fields = strjoin("\n", result_fields)
+
+| eval 
+		return_desc_yn = if( isnotnull(result_fields), true, false),
+		row = indexof(query_string, "**") ,
+		query_string = if(row == -1, "설명 작성 필요", substr(query_string, 0, row))
+| rename name as proc_name, description as proc_description
+| sort proc_name
+| join proc_name [ proc 99_procedure_ref("", "") | rename name as proc_name | fields proc_name, table ] 
+| explode parameters
+| parsemap overlay=t field=parameters
+| fields - parameters
+| eval needs_check = if(isnull(query_string, "확인필요"), true, false)
+| rename name as param_name, description as param_desc, query_string as description
+| lookup lu_proc_parameters key output type, param_description, param_example
+
+|# 변환 시작점
+|# code 88 : 전체 인스턴스, 99 : 인스턴스와 상관 없는 프로시저
+| eval code = case( table == "*exem_aiops_anls_inst_code*" or table == "*xapm_txn_detail*" or table == "*apdex_mart_service*", 1, 
+                                  table == "*exem_aiops_anls_inst_db*" or table == "*ora_*", 2, 
+                                  table == "*exem_aiops_anls_inst_network*" or table == "*nms_*", 3, 
+                                  table == "*exem_aiops_anls_inst_os*" or table == "*sentry_*" or table == "*apdex_mart_infra*", 4, 
+                                  table == "*exem_aiops_anls_inst_tp*" or table == "*tp_*", 5, 
+                                  table == "*exem_aiops_anls_inst_was*" or table == "*xapm_*", 6,  
+                                  table == "*exem_aiops_anls_inst_web*" or table == "*web_*", 7, 
+                                  table == "*apdex_mart_instance_inst_group*", 9,
+                                  table == "*apdex_mart_service_biz*", 8,
+                                   table == "*exem_aiops_anls_log_*" or table == "*log_*" or table == "*syslog*", 10,  88)
+| eval code = case( code == 88 and (proc_name == "*code*" or proc_name == "*service*"), 1, code == 88 and proc_name == "*db*", 2, 
+									code == 88 and proc_name == "*network*", 3,  code == 88 and (proc_name == "*os*" or proc_name == "*infra*"), 4, 
+                                    code == 88 and proc_name == "*tp*", 5, code == 88 and proc_name == "*was*", 6, 
+                                    code == 88 and proc_name == "*web*", 7, code == 88 and proc_name == "*biz*", 8,
+                                    code == 88 and proc_name == "*inst_group*", 9, code == 88 and proc_name == "*log*", 10, code) 
+
+| eval 
+		key = case( key == "host_name", "os_id", key == "host_names", "os_ids", key == "tx_code", "code_id", 
+        key == "tx_codes", "code_ids", key),
+		
+        key = case( code == 1 and key == "target_id", "code_id", code == 1 and key == "target_ids", "code_ids", 
+        code == 1 and key == "metric", "code_metric", code == 1 and key == "metrics", "code_metrics", 
+        code == 1 and key == "field_name", "code_metric", key),
+		param_example = case(code == 1 and key == "inst_type", "service", code == 1 and key == "apdex_type", "service",
+        code == 1 and key == "module", "exem_aiops_anls_inst", code == 1 and key == "target_type", "service", param_example),
+        
+        key = case( code == 2 and key == "target_id", "db_id", code == 2 and key == "target_ids", "db_ids", 
+       	code == 2 and key == "metric", "db_metric", code == 2 and key == "metrics", "db_metrics", 
+        code == 2 and key == "field_name", "db_metric", key),     
+        param_example = case(code == 2 and key == "inst_type", "db", code == 2 and key == "apdex_type", "instance", 
+        code == 2 and key == "module", "exem_aiops_anls_inst", code == 2 and key == "target_type", "db", 
+        code == 2 and key == "inst_product_type", "oracle", param_example),
+        
+        key = case( code == 3 and key == "target_id", "network_id", code == 3 and key == "target_ids", "network_ids", 
+        code == 3 and key == "metric", "network_metric", code == 3 and key == "metrics", "network_metrics", 
+        code == 3 and key == "field_name", "network_metric", key),
+		param_example = case(code == 3 and key == "inst_type", "network", code == 3 and key == "apdex_type", "instance", 
+        code == 3 and key == "module", "exem_aiops_anls_inst", code == 3 and key == "target_type", "network", param_example),
+        
+        key = case( code == 4 and key == "target_id", "os_id", code == 4 and key == "target_ids", "os_ids", 
+        code == 4 and key == "metric", "os_metric", code == 4 and key == "metrics", "os_metrics", 
+        code == 4 and key == "field_name", "os_metric", key),
+		param_example = case(code == 4 and key == "inst_type", "os", code == 4 and key == "apdex_type", "infra", 
+        code == 4 and key == "module", "exem_aiops_anls_inst", code == 4 and key == "target_type", "os", param_example),
+        
+        key = case( code == 5 and key == "target_id", "tp_id", code == 5 and key == "target_ids", "tp_ids", 
+        code == 5 and key == "metric", "tp_metric", code == 5 and key == "metrics", "tp_metrics", 
+        code == 5 and key == "field_name", "tp_metric", key),
+        param_example = case(code == 5 and key == "inst_type", "tp", code == 5 and key == "apdex_type", "instance", 
+        code == 5 and key == "module", "exem_aiops_anls_inst", code == 5 and key == "target_type", "tp", param_example),
+        
+        key = case( code == 6 and key == "target_id", "was_id", code == 6 and key == "target_ids", "was_ids", 
+        code == 6 and key == "metric", "was_metric", code == 6 and key == "metrics", "was_metrics", 
+        code == 6 and key == "field_name", "was_metric", key),
+		param_example = case(code == 6 and key == "inst_type", "was", code == 6 and key == "apdex_type", "instance", 
+        code == 6 and key == "module", "exem_aiops_anls_inst", code == 6 and key == "target_type", "was", param_example),
+        
+        key = case( code == 7 and key == "target_id", "web_id", code == 7 and key == "target_ids", "web_ids", 
+        code == 7 and key == "metric", "web_metric", code == 7 and key == "metrics", "web_metrics", 
+        code == 7 and key == "field_name", "web_metric", key),
+		param_example = case(code == 7 and key == "inst_type", "was", code == 7 and key == "apdex_type", "instance", 
+        code == 7 and key == "module", "exem_aiops_anls_inst", code == 7 and key == "target_type", "was", param_example),
+        
+        key = case( code == 8 and key == "target_id", "biz_id", code == 8 and key == "target_ids", "biz_ids", 
+        code == 8 and key == "metric", "biz_metric", key), 
+        param_example = case(code == 8 and key == "inst_type", "service", code == 8 and key == "apdex_type", "service", 
+        code == 8 and key == "target_type", "service", param_example),
+        
+        key = case( code == 9 and key == "target_id", "inst_group_id", code == 9 and key == "target_ids", "inst_group_ids", 
+        code == 9 and key == "metric", "inst_group_metric", key), 
+        param_example = case(code == 9 and key == "inst_type", "instance", code == 9 and key == "apdex_type", "instance", 
+        code == 9 and key == "target_type", "instance", param_example),
+
+		key = case( code == 10 and key == "target_id", "log_id", code == 10 and key == "target_ids", "log_ids", 
+        code == 10 and key == "metric", "log_metric", code == 10 and key == "metrics", "log_metrics", 
+        code == 10 and key == "field_name", "log_metric", key),
+        
+        key = case( code == 88 and key == "target_id", "was_id", code == 88 and key == "target_ids", "was_ids", 
+        code == 88 and key == "metric", "was_metric", code == 88 and key == "metrics", "was_metrics", 
+        code == 88 and key == "field_name", "was_metric", key),
+		param_example = case(code == 88 and key == "inst_type", "was", code == 88 and key == "apdex_type", "instance", 
+        code == 88 and key == "module", "exem_aiops_anls_inst", code == 88 and key == "target_type", "was", param_example)
+|# param_example 변환 과정
+| eval
+		param_example = case(
+													key == "from", string( dateadd( datetrunc(now(), "1m"), "min", -10), "yyyyMMddHHmm"),
+                                                    key == "from_yMdHm", string( dateadd( datetrunc(now(), "1m"), "min", -10), "yyyyMMddHHmm"),
+                                                    key == "from_date", string( dateadd( now(), "min", -10), "yyyyMMddHHmmss"),
+                                                    key == "from_day", string( dateadd( datetrunc( now(), "1d"), "day", -1), "yyyyMMdd"),
+                                                    key == "from_ms", string( dateadd( now(), "min", -10), "yyyyMMddHHmmssS"),
+                                                    key == "from_yMdHmS", string( dateadd( now(), "min", -10), "yyyyMMddHHmmssS"),
+                                                    key == "to", string( dateadd( datetrunc(now(), "1m"), "min", -9), "yyyyMMddHHmm"),
+                                                    key == "to_day", string( datetrunc( now(), "1d"), "yyyyMMdd"),
+                                                    key == "to_yMdHmS", string( dateadd( now(), "min", -10), "yyyyMMddHHmmssS"),
+                                                    key == "to_yMdHm", string( dateadd( datetrunc(now(), "1m"), "min", -10), "yyyyMMddHHmm"),
+                                                    key == "to_date", string( dateadd( now(), "min", -10), "yyyyMMddHHmmss"),
+                                                    key == "system_id" or key == "sys_id", $("system_id"), 
+                                                    key == "os_id", valueof(valueof($("target_dict"), "os_id"), 0),
+                                                    key == "os_ids", strjoin( ",", valueof($("target_dict"), "os_id")),
+                                                    key == "db_id", valueof(valueof($("target_dict"), "db_id"), 0),
+                                                    key == "db_ids", strjoin( ",", valueof($("target_dict"), "db_id")),
+                                                    key == "was_id", valueof(valueof($("target_dict"), "was_id"), 0),
+                                                    key == "was_ids", strjoin( ",", valueof($("target_dict"), "was_id")),
+                                                    key == "code_id", valueof(valueof($("target_dict"), "code_id"), 0),
+                                                    key == "code_ids", strjoin( ",", valueof($("target_dict"), "code_id")),
+                                                    key == "web_id", valueof(valueof($("target_dict"), "web_id"), 0),
+                                                    key == "web_ids", strjoin( ",", valueof($("target_dict"), "web_id")),
+                                                    key == "tp_id", valueof(valueof($("target_dict"), "tp_id"), 0),
+                                                    key == "tp_ids", strjoin( ",", valueof($("target_dict"), "tp_id")),
+                                                    key == "txn_name", valueof(valueof($("target_dict"), "e2e_by_was_id"), 0),
+                                                    key == "log_id", valueof( valueof( $("target_dict"), "log_id"), 0),
+                                                    key == "log_ids", strjoin( ",", valueof($("target_dict"), "log_id")),
+                                                    key == "target_id", valueof(valueof($("target_dict"), "was_id"), 0),
+                                                    key == "target_ids", strjoin( ",", valueof($("target_dict"), "was_id")), param_example),
+			param_example = case(
+                                                    key == "os_metric", valueof(valueof($("metric_dict"), "os_metric"), 0),
+                                                    key == "os_metrics", strjoin( ",", valueof($("metric_dict"), "os_metric")),
+                                                    key == "db_metric", valueof(valueof($("metric_dict"), "db_metric"), 0),
+                                                    key == "db_metrics", strjoin( ",", valueof($("metric_dict"), "db_metric")),
+                                                    key == "was_metric", valueof(valueof($("metric_dict"), "was_metric"), 0),
+                                                    key == "was_metrics", strjoin( ",", valueof($("metric_dict"), "was_metric")),
+                                                    key == "code_metric", valueof(valueof($("metric_dict"), "code_metric"), 0),
+                                                    key == "code_metrics", strjoin( ",", valueof($("metric_dict"), "code_metric")),
+                                                    key == "web_metric", valueof(valueof($("metric_dict"), "web_metric"), 0),
+                                                    key == "web_metrics", strjoin( ",", valueof($("metric_dict"), "web_metric")),
+                                                    key == "tp_metric", valueof(valueof($("metric_dict"), "tp_metric"), 0),
+                                                    key == "tp_metrics", strjoin( ",", valueof($("metric_dict"), "tp_metric")),
+                                                    key == "txn_name", valueof(valueof($("metric_dict"), "e2e_by_was_metric"), 0),
+                                                    key == "log_metric", valueof( valueof( $("metric_dict"), "log_metric"), 0),
+                                                    key == "log_metrics", strjoin( ",", valueof($("metric_dict"), "log_metric")),
+                                                    key == "target_metric", valueof(valueof($("metric_dict"), "was_metric"), 0),
+                                                    key == "target_metrics", strjoin( ",", valueof($("metric_dict"), "was_metric")) , param_example)
+
+| eval param_description = nvl(param_description, nvl(param_desc, nvl(param_example, "설정 필요"))), param_example = nvl(param_example, nvl(param_desc, "설정 필요"))
+| eval param_desc = if(type=="string", concat("\"", param_example, "\""), param_example)
+| stats array(key) as param_key, array(param_desc) as param_desc, array(param_description) as param_description, array(type) as type, array(code) as code, first(result_fields) as result_fields by proc_description , description, proc_name, needs_check, return_desc_yn
+| join proc_name [ proc 99_procedure_ref("", "") | rename name as proc_name | fields proc_name, table | eval table = nvl(table, "없음"), table = format( "# [참조중인 테이블 %s ]\n", table) ] 
+| eval 
+        a= if(contains(code, 10) or contains(code, 88), "# 여러 인스턴스 사용 가능하기 때문에 파라미터 타입 주의\n", null),
+        b = if( needs_check, "# 프로시저 점검 필요\n", null),
+        c = if( not(return_desc_yn), "# 프로시저 리턴 컬럼 작성 필요\n", null),
+        example = concat(a,b,c, table, "| proc ", proc_name, "(", strjoin( ", " ,param_desc), ")") ,
+        params = foreach(concat( _1, " : ", "(", _3, ") ", _2), param_key, param_description, type)
+| rename proc_description as menu
+| order menu, proc_name, description, params, exemple
+| sort -needs_check, return_desc_yn, menu, proc_name, result_fields
+| fields - param_key, type, param_name, param_desc, param_description, table, a ,code, priority, b, c, needs_check, return_desc_yn
+| eval params = strjoin("\n", params)

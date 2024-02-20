@@ -1,0 +1,23 @@
+파라미터 : [int system_id, string target_id, string from, string to]
+설명 : 모니터링 > 서비스 모니터링 > 트랜잭션 X-view (기본)
+
+# 모니터링 > 서비스 모니터링 > 트랜잭션 X-VIEW (기본) ** 
+| # [ set system_id = 102 | set from = 202209290100 | set to = 202209290200 | set target_id = "2" ]
+| table from=$("from") to=$("to") parallel=t xapm_txn_detail 
+| search first == 1
+| eval _target = if(contains(tx_code, "/"), tohex( hash("md5", binary(tx_code))), string(tx_code))
+| search _target == $("target_id") and system_id == $("system_id")
+| fields _time, system_id, was_id, txn_id, txn_elapse, exception
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss.SSS")
+| # 참조 : server_service_monitoring_was_elapse, server_service_monitoring_all_elapse
+| fields _time, system_id, was_id, txn_id, txn_elapse, exception, time
+
+| # [result_fields[
+_time || date || not null
+exception || int || not null
+system_id || int || not null
+time || string || not null
+txn_elapse || int || not null
+txn_id || string || not null
+was_id || int || not null
+| # ]result_fields]

@@ -1,0 +1,151 @@
+파라미터 : []
+설명 : analysis_inst_was DM 생성 | 임시 import dm__anls_inst_os
+
+# 아래 쿼리로 DM을 저장하세요.(쿼리 출처 : 90_gen_dm_import_anls)
+
+
+| # 마지막 저장 일시 조회
+| setq [ table duration=10m dm__anls_inst_os
+	| search system_id == 102
+	| stats max(_time) as last_time
+	| eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+	| fields last_time ]
+| set inst_type = "os"
+| set from_date=datetrunc(dateadd(now(), "min", -4), "1m") 
+| set to_date=datetrunc(now(), "1m")
+| table from=$("from_date") to=$("to_date") dl__anls_inst_os
+
+| # [ exception_1 ]
+
+| # 1분 통계 처리
+| eval _time = datetrunc(_time, "1m")
+| stats 
+	avg(cpu_idle) as cpu_idle, 
+	avg(cpu_system) as cpu_system, 
+	avg(cpu_usage) as cpu_usage, 
+	avg(cpu_usage_max) as cpu_usage_max, 
+	avg(cpu_user) as cpu_user, 
+	avg(cpu_wait) as cpu_wait, 
+	avg(memory_free) as memory_free, 
+	avg(memory_total) as memory_total, 
+	avg(memory_usage) as memory_usage, 
+	avg(memory_usage_max) as memory_usage_max, 
+	avg(memory_used) as memory_used, 
+	avg(network_in_bytes) as network_in_bytes, 
+	avg(network_in_discards_bytes) as network_in_discards_bytes, 
+	avg(network_in_errors_count) as network_in_errors_count, 
+	avg(network_in_pkts) as network_in_pkts, 
+	avg(network_iops) as network_iops, 
+	avg(network_out_bytes) as network_out_bytes, 
+	avg(network_out_discards_bytes) as network_out_discards_bytes, 
+	avg(network_out_errors_count) as network_out_errors_count, 
+	avg(network_out_pkts) as network_out_pkts, 
+	avg(network_readwrite) as network_readwrite, 
+	avg(network_used) as network_used, 
+	avg(process_exec) as process_exec, 
+	avg(process_fork) as process_fork, 
+	avg(swap_free) as swap_free, 
+	avg(swap_total) as swap_total, 
+	avg(swap_usage) as swap_usage, 
+	avg(swap_usage_max) as swap_usage_max, 
+	avg(swap_used) as swap_used, 
+	avg(system_call) as system_call, 
+	first(disk_free) as disk_free, 
+	first(disk_iops) as disk_iops, 
+	first(disk_readwrite) as disk_readwrite, 
+	first(disk_total) as disk_total, 
+	first(disk_usage) as disk_usage, first(disk_partition) as disk_partition, 
+	first(disk_used) as disk_used
+    by _time, system_id, _target
+| # [ stat_exception_1 ]
+
+| # 결측치 처리
+| # eval 	cpu_idle = nvl( cpu_idle, 0 ), 
+	cpu_system = nvl( cpu_system, 0 ), 
+	cpu_usage = nvl( cpu_usage, 0 ), 
+	cpu_usage_max = nvl( cpu_usage_max, 0 ), 
+	cpu_user = nvl( cpu_user, 0 ), 
+	cpu_wait = nvl( cpu_wait, 0 ), 
+	disk_free = nvl( disk_free, 0 ), 
+	disk_iops = nvl( disk_iops, 0 ), 
+	disk_readwrite = nvl( disk_readwrite, 0 ), 
+	disk_total = nvl( disk_total, 0 ), 
+	disk_usage = nvl( disk_usage, 0 ), 
+	disk_used = nvl( disk_used, 0 ), 
+	memory_free = nvl( memory_free, 0 ), 
+	memory_total = nvl( memory_total, 0 ), 
+	memory_usage = nvl( memory_usage, 0 ), 
+	memory_usage_max = nvl( memory_usage_max, 0 ), 
+	memory_used = nvl( memory_used, 0 ), 
+	network_in_bytes = nvl( network_in_bytes, 0 ), 
+	network_in_discards_bytes = nvl( network_in_discards_bytes, 0 ), 
+	network_in_errors_count = nvl( network_in_errors_count, 0 ), 
+	network_in_pkts = nvl( network_in_pkts, 0 ), 
+	network_iops = nvl( network_iops, 0 ), 
+	network_out_bytes = nvl( network_out_bytes, 0 ), 
+	network_out_discards_bytes = nvl( network_out_discards_bytes, 0 ), 
+	network_out_errors_count = nvl( network_out_errors_count, 0 ), 
+	network_out_pkts = nvl( network_out_pkts, 0 ), 
+	network_readwrite = nvl( network_readwrite, 0 ), 
+	network_used = nvl( network_used, 0 ), 
+	process_exec = nvl( process_exec, 0 ), 
+	process_fork = nvl( process_fork, 0 ), 
+	swap_free = nvl( swap_free, 0 ), 
+	swap_total = nvl( swap_total, 0 ), 
+	swap_usage = nvl( swap_usage, 0 ), 
+	swap_usage_max = nvl( swap_usage_max, 0 ), 
+	swap_used = nvl( swap_used, 0 ), 
+	system_call = nvl( system_call, 0 )
+
+| # 소수점 치리
+| set floor_decimal = 2
+| eval time = str(_time, "yyyy-MM-dd HH:mm:ss"),
+	cpu_idle = floor( cpu_idle, $("floor_decimal") ), 
+	cpu_system = floor( cpu_system, $("floor_decimal") ), 
+	cpu_usage = floor( cpu_usage, $("floor_decimal") ), 
+	cpu_usage_max = floor( cpu_usage_max, $("floor_decimal") ), 
+	cpu_user = floor( cpu_user, $("floor_decimal") ), 
+	cpu_wait = floor( cpu_wait, $("floor_decimal") ), 
+	disk_free = floor( disk_free, $("floor_decimal") ), 
+	disk_iops = floor( disk_iops, $("floor_decimal") ), 
+	disk_readwrite = floor( disk_readwrite, $("floor_decimal") ), 
+	disk_total = floor( disk_total, $("floor_decimal") ), 
+	disk_usage = floor( disk_usage, $("floor_decimal") ), 
+	disk_used = floor( disk_used, $("floor_decimal") ), 
+	memory_free = floor( memory_free, $("floor_decimal") ), 
+	memory_total = floor( memory_total, $("floor_decimal") ), 
+	memory_usage = floor( memory_usage, $("floor_decimal") ), 
+	memory_usage_max = floor( memory_usage_max, $("floor_decimal") ), 
+	memory_used = floor( memory_used, $("floor_decimal") ), 
+	network_in_bytes = floor( network_in_bytes, $("floor_decimal") ), 
+	network_in_discards_bytes = floor( network_in_discards_bytes, $("floor_decimal") ), 
+	network_in_errors_count = floor( network_in_errors_count, $("floor_decimal") ), 
+	network_in_pkts = floor( network_in_pkts, $("floor_decimal") ), 
+	network_iops = floor( network_iops, $("floor_decimal") ), 
+	network_out_bytes = floor( network_out_bytes, $("floor_decimal") ), 
+	network_out_discards_bytes = floor( network_out_discards_bytes, $("floor_decimal") ), 
+	network_out_errors_count = floor( network_out_errors_count, $("floor_decimal") ), 
+	network_out_pkts = floor( network_out_pkts, $("floor_decimal") ), 
+	network_readwrite = floor( network_readwrite, $("floor_decimal") ), 
+	network_used = floor( network_used, $("floor_decimal") ), 
+	process_exec = floor( process_exec, $("floor_decimal") ), 
+	process_fork = floor( process_fork, $("floor_decimal") ), 
+	swap_free = floor( swap_free, $("floor_decimal") ), 
+	swap_total = floor( swap_total, $("floor_decimal") ), 
+	swap_usage = floor( swap_usage, $("floor_decimal") ), 
+	swap_usage_max = floor( swap_usage_max, $("floor_decimal") ), 
+	swap_used = floor( swap_used, $("floor_decimal") ), 
+	system_call = floor( system_call, $("floor_decimal") )
+
+| # [ exception_2 ]
+
+| search _time > $("last_time")
+| eval inst_type=nvl(inst_type, $("inst_type"))
+
+| import dm__anls_inst_os
+
+| # evtctx - exem_aiops_anls_inst_os
+| fields _time, system_id, _target, inst_type
+| stats count by _time, system_id, _target, inst_type
+| eval module = "exem_aiops_anls_inst", inst_type = nvl(inst_type, $("inst_type")), key= concat( module, "_", inst_type, "_", _target)
+| evtctxadd key=key topic="mart_result" maxrows=10 isnotnull(_target)

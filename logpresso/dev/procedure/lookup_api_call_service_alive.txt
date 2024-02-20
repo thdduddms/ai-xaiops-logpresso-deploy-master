@@ -1,0 +1,18 @@
+파라미터 : []
+설명 : 서빙) /external/clt/service 서버API 호출
+
+# 개발계 서버API URL
+| # redis로 변경
+|set api_server_url = "http://10.10.34.21:14568/redis/service"
+|  # set api_server_url = "http://10.10.37.72:14569/external/clt/service"
+| # set api_server_url = "http://10.10.31.167:14569/logpresso/service"
+| # 운영계 서버API URL
+| # set api_server_url = "http://10.10.30.60:14569/external/clt/service"
+| # set api_server_url = "http://10.10.34.11:14568/redis/service"
+| wget url=$("api_server_url") timeout=5  
+| parsejson  
+| explode data  
+| parsemap field=data 
+| rename sys_id as system_id, type as inst_type
+| eval system_id = int(system_id), target_id = str(target_id)
+| memlookup op=build name=lookup_api_call_service_alive key=service_name module, inst_type, system_id, target_id, alive

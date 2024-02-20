@@ -1,0 +1,24 @@
+파라미터 : [int system_id, string db_conn_trg_pnms, string from]
+설명 : 모니터링 > 인프라, 인스턴스 / 모니터링, 장애분석 > 변경이력 > META (신한은행 전용)
+
+# 변경이력 - META 탭 데이터 리턴 - DB일때만 **
+| set to = dateadd( date( $("from"), "yyyyMMddHHmm"), "min", 1)
+| set from = dateadd( date( $("from"), "yyyyMMddHHmm"), "day", -7)
+| table from=$("from") to=$("to") waa_db_conn_trg 
+| join db_conn_trg_pnm [
+      json "{}"
+      | eval db_conn_trg_pnm = split( $("db_conn_trg_pnms"), ",") 
+      | explode db_conn_trg_pnm | eval db_conn_trg_pnm = replace(db_conn_trg_pnm, "(\\d+)$", "", "re")  ]
+| stats count by db_conn_trg_id, db_conn_trg_pnm, db_conn_trg_lnm
+| fields db_conn_trg_id, db_conn_trg_lnm, db_conn_trg_pnm, count
+| join db_conn_trg_id [
+        table from=$("from") to=$("to") waa_db_sch
+        | stats count by db_conn_trg_id, db_sch_id, db_sch_pnm
+        | fields db_conn_trg_id, db_sch_id, db_sch_pnm
+        | join db_sch_id [
+              table wah_ddl_tbl
+              | fields db_sch_id, script_info, prc_dt, prc_dba_id, ddl_tbl_pnm
+        ]
+]
+| sort db_conn_trg_pnm
+| fields db_conn_trg_pnm, db_conn_trg_lnm, db_sch_pnm, ddl_tbl_pnm, script_info, prc_dt, prc_dba_id

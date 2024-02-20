@@ -1,0 +1,31 @@
+파라미터 : [int system_id, string table, string target_field, string inst_type, string inst_product_type, string from, string to]
+설명 : 통계 & 내역 > 수집 데이터 차트 > 타겟 목록
+
+# 데이터 분석을 위한 테이블의 대상 목록 조회 **
+| # { [ set from=202304010000 | set to=202304060000 | set table="apdex_mart_instance" | set system_id=102 | set target_field="target_id" |set inst_type = "was" | # set inst_product_type="ORACLE" | # } ]
+| # set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1440)
+| table from=$("from") to=$("to") parallel=t $("table")
+| search if(isnotnull(system_id), system_id==$("system_id"), true) 
+				and if(isnotnull(inst_type), inst_type==$("inst_type"), true) 
+| eval target = string(field($("target_field"))), inst_type = $("inst_type")
+| search if($("inst_product_type")=="", true, inst_product_type==$("inst_product_type")) 
+| order inst_product_type, inst_type
+|  stats count by target, inst_type
+| join type=left target, inst_type [ 
+	dbquery ai_server select sys_id, 'code' as inst_type, tx_code as target, tx_code_name as name from xaiops_service
+	where sys_id = :system_id
+	union
+	select sys_id, inst_type, target_id as target, name from xaiops_instance
+    where sys_id = :system_id
+    union
+    select sys_id, 'os' as inst_type, target_id as target, name from xaiops_host
+    where sys_id = :system_id 
+    ]
+| rename name as target_name
+| fields target, inst_type, target_name
+
+| # [result_fields[
+inst_type || string || not null
+target || string || not null
+target_name || string || not null
+| # ]result_fields]

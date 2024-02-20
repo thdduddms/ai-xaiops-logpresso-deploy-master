@@ -1,0 +1,70 @@
+파라미터 : [int system_id, string group_id, bool del_yn, bool first_exec_yn]
+설명 : 로그이상탐지 수집설정 스크립트 생성용 배치파일 만들기 (local, sentry)
+
+# set group_id = "A"
+| lookuptable lu_create_logger
+| # search create_yn == "Y" and xaiops_module == "exem_aiops_anls_log"
+| search create_yn == "Y"
+      and if( isnull($("system_id")), true, int(system_id) == $("system_id") )
+      and if( isnull($("group_id")) or upper($("group_id"))=="ALL", true, upper(group_id)==upper($("group_id")) )
+| join type=left log_file_type [ lookuptable lu_create_logger_configs ]
+| eval is_local = if( logger_namespace == "local", true, false)
+| eval server_name = if( is_local, server_alias, logger_namesapce),
+       logger_name = if( isnull(logger_name), concat( system_id, "[", server_name, "]", log_category, ".", log_file_type, "__", log_file_id), logger_name),
+       host_tag = logger_name,
+       dl_table_name = concat( "log_", log_category),
+       logger_fullname = concat( logger_namespace,"\\", logger_name ),
+       conn_profile_name = if(is_local,replace( conn_profile_name, "$server_alias$", server_alias), ""),
+       file_path = concat(directory_path, "/", filename_pattern)
+| eval 0_logapi_removeLogger = if( is_local, concat( "logapi.removeLogger ", logger_fullname, "\n" )
+																			, concat( "base.disconnectRemoteLogger ", logger_namespace, " ", logger_name, "\n",
+																							"base.removeRemoteLogger ", logger_namespace, " ", logger_name, "\n" ) ),
+       0_logpresso_removeLogger = concat( "logpresso.removeLogger ", logger_fullname, "\n" ),
+
+       1_logapi_createLogger = if( is_local, concat( "logapi.createLogger ", logger_factory_name, " ", logger_namespace, " ", logger_name, " ", logger_desc, " <<EOF\n")
+       																	, concat( "base.createRemoteLogger ", logger_namespace, " ", logger_factory_name, " ", logger_name, " ", logger_desc, " <<EOF\n")),
+       1_logapi_createLogger_q = concat( case( 
+        										logger_factory_name=="dirwatch",          concat(            directory_path, "\n", filename_pattern, "\n", date_pattern, "\n", date_format, "\n", date_locale, "\n", time_zone, "\n", begin_regex, "\n", end_regex, "\n", charset, "\n", filename_tag, "\n", path_tag, "\n", path_date_format, "\n", scan_days, "\n", eof_flush, "\n", cr_for_line_break, "\n", transformer, "\n" ),
+        										logger_factory_name=="sftp-rotation",   concat( conn_profile_name, "\n", file_path, "\n", charset, "\n", date_pattern, "\n", date_format, "\n", date_locale, "\n", time_zone, "\n", begin_regex, "\n", end_regex, "\n", eof_flush, "\n", cr_line_break, "\n", transformer, "\n" ),
+        										logger_factory_name=="rotation",           concat(                                             file_path, "\n", charset, "\n", date_pattern, "\n", date_format, "\n", date_locale, "\n", time_zone, "\n", begin_regex, "\n", end_regex, "\n", eof_flush, "\n", cr_line_break, "\n", transformer, "\n" ),
+        										logger_factory_name=="sftp-multi-rotation", concat( conn_profile_name, "\n", directory_path, "\n", filename_pattern, "\n", charset, "\n", date_pattern, "\n", date_format, "\n", date_locale, "\n", time_zone, "\n", begin_regex, "\n", end_regex, "\n", filename_tag, "\n", eof_flush, "\n", transformer, "\n" ),
+        										logger_factory_name=="multi-rotation", concat(                                                     directory_path, "\n", filename_pattern, "\n", charset, "\n", date_pattern, "\n", date_format, "\n", date_locale, "\n", time_zone, "\n", begin_regex, "\n", end_regex, "\n", filename_tag, "\n", eof_flush, "\n", transformer, "\n" ),
+        										logger_factory_name=="windows-event-logger", concat( directory_path, "\n", "\n"),
+                                                logger_factory_name=="wtmp", concat( directory_path, "\n", "\n", "\n", transformer, "\n")
+        										), "EOF\n"),
+       1_logapi_createLogger = concat(1_logapi_createLogger, 1_logapi_createLogger_q, if (is_local, "", concat( "base.connectRemoteLogger ", logger_namespace, " ", logger_name, "\n"))),
+        2_logpresso_createLogger = concat( "logpresso.createLogger ", logger_fullname, " ", dl_table_name, " ", host_tag, " ", logger_desc, "\n"),
+
+        create_batch = concat( if($("del_yn", true), concat(0_logapi_removeLogger, 0_logpresso_removeLogger), "")),
+        create_batch = concat( create_batch, 1_logapi_createLogger, 2_logpresso_createLogger),
+        stop_batch = if( is_local, concat( "logapi.stopLogger ", logger_fullname, "\n")
+                                 , concat( "base.stopRemoteLogger ", logger_namespace, " ", logger_name, " 3000 \n" )),
+        start_batch = if( is_local, concat( "logapi.startLogger ", logger_fullname, " ", if($("first_exec_yn", true), 600000, interval_ms), "\n")
+                                  , concat( "base.startRemoteLogger ", logger_namespace, " ", logger_name, " ", if($("first_exec_yn", true), 600000, interval_ms), "\n"))
+
+| stats count, array(logger_fullname) as logger_fullname, array(create_batch) as create_batch, array(stop_batch) as stop_batch, array(start_batch) as start_batch by system_id, group_id
+| eval stop_batch = concat( "date ==============================\n", strjoin("date ------------------------------\n", stop_batch)), 
+		create_batch = concat( "date =============================\n", strjoin("date ------------------------------\n", create_batch)), 
+		start_batch = concat( "date ==============================\n", strjoin("date ------------------------------\n", start_batch))
+| outputtxt overwrite=t partition=t encoding="UTF-8" script/job/{now:yyyyMMdd}/stop_logger.batch stop_batch
+| outputtxt overwrite=t partition=t encoding="UTF-8" script/job/{now:yyyyMMdd}/create_logger.batch create_batch
+| outputtxt overwrite=t partition=t encoding="UTF-8" script/job/{now:yyyyMMdd}/start_logger.batch start_batch
+| # fields system_id, group_id, count, create_batch, stop_batch, start_batch
+| fields system_id, group_id, count, logger_fullname
+| eval logger_fullname = strjoin("\n", logger_fullname)
+| union [ json  "{}" | eval cli_cmd = concat(
+										"아래 작업 순서대로 진행하세요.\n",
+                                        "(※ 안내 문구만 나오는 경우, 생성 과정에 오류가 있습니다. 매개변수를 확인하세요.) \n",
+																				"\n1. 수집기 관리\n",
+										"\t중지 - araqne> batch.executeFile script/job/", str(now(), "yyyyMMdd"), "/stop_logger.batch\n",
+										"\t",if($("del_yn", true), "삭제/생성", "생성"), " - araqne> batch.executeFile script/job/", str(now(), "yyyyMMdd"), "/create_logger.batch\n",
+										"\t시작 - araqne> batch.executeFile script/job/", str(now(), "yyyyMMdd"), "/start_logger.batch\n",
+                                        "\n2. 생성 결과 확인\n",
+                                        "\tStep1 - araqne> logapi.loggers ", $("system_id"), "[\n",
+                                        "\tStep2 - araqne> logpresso.loggers ", $("system_id"), "[\n",
+                                        "\t또는\n",
+                                        "\tStep1 - query> confdb docs logpresso loggers | search host == \"", $("system_id"), "[*\" and table_name == \"log_*\" \n\t\t\t| fields full_name, host, table_name, is_enabled, primary_logger, backup_logger", "\n",
+                                        "\tStep2 - query> confdb docs araqne-log-api logger | union [ sentry | fields guid | sentry-loggers | eval fullname  = if( isnotnull(name), concat(guid, \"\\\\\", name), null) ] \n\t\t\t| search name == \"", $("system_id"), "[*\" | fields fullname, factory_name, description, status, interval, last_log_at, configs | sort fullname", "\n",
+                                        "\n*** 옵션 ***\n \t 로컬 수집기 이중화 설정하기(미제공) - arqne> logpresso.runAsPrimaryLogger, logpresso.runAsBackupLogger / logpresso.runAsStandaloneLogger", "\n",
+                                        "\n*** 필수. 생성/수집이 정상이면 실행 ***\n \t생성내용 XAIOps에 반영하기 - query> proc lookup_log_logger_info()")
+                                        ]

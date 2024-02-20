@@ -1,0 +1,6 @@
+실행 주기 : 40 0 * * *
+경보 사용 : null
+
+set from = string(datetrunc(dateadd(now(), "day", -1), "1d"), "yyyyMMdd")
+| set to = string(datetrunc(dateadd(now(), "day", -1), "1d"), "yyyyMMdd")
+| proc table_backup($("from"), $("to"))

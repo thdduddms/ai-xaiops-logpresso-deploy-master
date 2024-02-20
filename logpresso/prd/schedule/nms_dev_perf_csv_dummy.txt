@@ -1,0 +1,22 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+csvfile /home/aic1/logpresso/script/perf.csv
+| eval _time = date(ymdhms, "yyyyMMddHHmmss")
+| rename 
+	DEV_IP as dev_ip, 
+    ITEM_TYPE as item_type, 
+    USER_DEV_NAME as user_dev_name, 
+    rate as value
+| fields - yyyymmdd, ymdhms
+
+| eval 
+		item_type = case(item_type == "1", "cpu_usage", item_type == "2", "memory_usage", "temperature")
+| sort limit=1 -_time by dev_ip, item_type, user_dev_name
+|# dummy data 
+| eval _time = datetrunc(now(), "1m") 
+| eval 
+	value = case(item_type == "cpu_usage", rand(30), 
+    						item_type == "memory_usage", rand(70) )
+| search _time > dateadd(now(), "min", -1)
+| import nms_dev_perf_csv

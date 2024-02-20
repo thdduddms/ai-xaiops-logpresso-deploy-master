@@ -1,0 +1,8 @@
+파라미터 : []
+설명 : 미사용
+
+json "{}"
+| # 개발계) XAIOps 관리자 모니터링 v2.5
+| eval url = "http://10.10.34.21:18888/logpresso/dashboard/pwfd7c4d71ae8b212b?apikey=a9e9345a-b0f2-47e2-3bc1-68f04008b801"
+| # 운영계) XAIOps 관리자 모니터링 v2.6
+| # eval url = "http://10.10.34.11:18888/logpresso/dashboard/pwe09200b58ab99d83?apikey=e1878ceb-c9b0-b6fb-7489-0d9dfe9ec4f7"

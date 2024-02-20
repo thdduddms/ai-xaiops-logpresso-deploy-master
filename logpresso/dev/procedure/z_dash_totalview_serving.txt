@@ -1,0 +1,112 @@
+파라미터 : [datetime from, datetime to, int serve_time_delay]
+설명 : 대시보드 > 서빙현황 > 서빙결과 조회
+
+# [ set from=date("2022-10-31 14:55:00", "yyyy-MM-dd HH:mm:ss")|set to=date("2022-10-31 15:00:00", "yyyy-MM-dd HH:mm:ss") ]
+| # set serve_time_delay = 2 | # 수집 딜레이 (분) - 데이터 소스에서 지정 (set)
+| set from = if( isnull($("from")), datetrunc(ago("3m"), "1m"), $("from"))
+| set to = if( isnull($("to")), datetrunc(ago("2m"), "1m"), $("to"))
+| memlookup name=lookup_api_call_service_alive
+| join type=inner system_id [
+	table z_xaiops_system_id
+    | eval system_id = if(isnull(int($("system_id"))), system_id, int($("system_id")))
+	| fields system_id  ]
+| search alive 
+|  join system_id, inst_type, target_id [  
+	memlookup name=z_xaiops_relation_infra | search enable | stats count by system_id, inst_type, target_id
+	| union [ memlookup name=z_xaiops_relation_instance | search enable | stats count by target_id,  inst_type, system_id ]
+	| union [ memlookup name=z_xaiops_relation_service | search enable | stats count by target_id,  inst_type, system_id ]
+    | union [ memlookup name=z_xaiops_relation_log | search enable | stats count by target_id,  inst_type, system_id ]
+    | fields system_id, inst_type, target_id
+]
+| eval process_time = subarray(daterange($("from"), $("to"), "1m"), 0, 300)
+| explode process_time
+| search process_time < datetrunc(now(), "1m")
+
+
+| # 감사로그 조회
+| join type=left process_time, service_name [
+    table from=$("from") to=$("to") araqne_query_logs
+    | search query_string != "# serve-time*" and query_string == "# serve-*" and source == "java-client" and duration>=0 and rows>0
+    | rex field=query_string "^.*?from=(?<serve_from>\d+)\s+to=(?<serve_to>\d+).*search.*?(system\_id\s+==\s+|system\_id==)(?<system_id>\d+)"
+    | eval serve_from = date(serve_from, "yyyyMMddHHmmss"), serve_to = date(serve_to, "yyyyMMddHHmmss"), system_id = int(system_id),
+	serve_name = trim( substr(query_string,  len("# serve-"), indexof(query_string, "|")) ),
+	exec_at = concat( str(start_at, "MM-dd HH:mm:ss"), " / ", rows, "건 (", duration, "초)\t" ),
+	service_name = split(serve_name, "_"), 
+	service_name = concat( "exem_aiops_", 
+					case( serve_name=="anls_log*", concat(valueof(service_name, 0), "_", valueof(service_name, 1), "_log_", system_id, "_", valueof(service_name, 3), "_", valueof(service_name, 4)),
+						  serve_name=="anls_inst*", concat(valueof(service_name, 0), "_", valueof(service_name, 1), "_", valueof(service_name, 2), "_", system_id, "_", valueof(service_name, 3),  if(len(service_name) == 5, concat("_", valueof(service_name, 4)), null)),
+						  serve_name=="event_prediction*", concat(valueof(service_name, 0), "_", valueof(service_name, 1), "_", valueof(service_name, 2), "_", system_id, "_", valueof(service_name, 3),  if(len(service_name) == 5, concat("_", valueof(service_name, 4)), null)),
+						  serve_name=="fcst_*", concat(valueof(service_name, 0), "_", valueof(service_name, 1) , "_", system_id, "_", valueof(service_name, 2)),
+						  serve_name=="anls_service", concat(valueof(service_name, 0), "_", valueof(service_name, 1) , "_service_", system_id, "_all")) ),
+	process_time = datetrunc(_time, "1m"),
+	module_name = split(service_name, "_"), 
+	module = concat("exem", case(serve_name=="*code*",  concat("_", valueof(module_name, 1) , "_", valueof(module_name, 2)),
+								 serve_name != "*code*", concat("_", valueof(module_name, 1) , "_", valueof(module_name, 2),
+								 "_", valueof(module_name, 3))))      
+]
+| # DM 저장 결과 조회 (exem_mart_result)
+| join type=left process_time, service_name [
+    table from=$("from") to=$("to") exem_mart_result
+    | eval service_name=concat(module, "_", inst_type, "_",  system_id, "_", _target ),
+           process_time = datetrunc(_time, "1m")
+    | stats sum(count) as count by process_time, service_name
+]
+| # apdex 저장 결과 조회 (exem_mart_result)
+| join type=left process_time, service_name [ 
+    table from=$("from") to=$("to") apdex_mart_instance
+    | eval service_name =concat("exem_aiops_anls_inst", "_", inst_type, "_",  system_id, "_", target_id)
+    | fields service_name, apdex_score, _time
+    | union [
+        table from=$("from") to=$("to") apdex_mart_infra
+        | eval service_name =concat("exem_aiops_anls_inst", "_", "os", "_",  system_id, "_", target_id)
+        | fields service_name, apdex_score, _time
+        ]
+    | union [
+        table from=$("from") to=$("to") apdex_mart_service
+        | eval service_name =concat("exem_aiops_fcst", "_", "code", "_",  system_id, "_", target_id)
+        | fields service_name, apdex_score, _time
+        ] 
+    | eval process_time = datetrunc(_time, "1m")
+    | fields process_time, apdex_score, service_name
+]
+| join module [ 
+	memlookup op=list name=lookup_xaiops_module_meta 
+	| stats count by module, module_name  
+	| fields module, module_name ]
+
+
+| # 수집기 서빙결과 이력 조회
+| join type=left process_time, service_name [ 
+            table order=asc from=$("from") to=$("to") xaiops_serving_history
+            | fields _time, line
+            | parsejson overlay=t
+			| eval data=replace(data, "{", ""), data=replace(data, "}", "")
+			| eval data1=replace(str(data), ", ", "\n")
+			| eval data2=split(data,  ", ")
+			| explode data2
+			| eval host=split(data2, "="), name=valueof(host, 0), service_name=replace(replace(if( name=="*_request", replace(name, "_request", ""), name), "[", "_"), "]", ""), serve_result_time=substr(valueof(host, 1), 5, 16)
+            | rename _time as process_time
+            | fields process_time, serve_result_time, service_name
+]
+
+
+| sort process_time, service_name, system_id, target_id
+
+
+| eval count = nvl( if(count > 0, format("%,d", count), if(in(inst_type, "log", "code"), if(apdex_score>=0, "누락", "예외"), null)), "누락" ),
+    apdex_score = nvl( case( in(inst_type, "was", "db", "os", "code", "network", "tp", "web"), apdex_score, "예외"), "누락" ),
+    exec_at = nvl( if(isnotnull(exec_at), exec_at, if(in(inst_type, "log", "code"), if(apdex_score>=0, "누락", "예외"), null)), "누락" ),
+    result = case( isnull(alive) or not(alive), "서빙 대상 아님",
+                count=="누락", "DM저장 누락",
+                exec_at=="누락", "데이터 조회 누락",
+                datediff(serve_from, process_time, "min") > int($("serve_time_delay")), "서빙 지연",
+                apdex_score=="누락", "Apdex스코어 누락",
+                "정상"),
+    process_time = str(process_time, "MM-dd HH:mm"),
+    serve_result_time = nvl(serve_result_time, ""),
+    note = case(inst_type=="log", "예외(옵션:로그길이 제한, 샘플링 조회)",
+                inst_type=="network", "데이터 수집 5분간격", "")
+| rename system_id as 시스템ID, inst_type as 인스턴스_타입, target_id as 대상ID, module_name as 모듈명, count as DM_건수, apdex_score as Apdex점수, module as 모듈_타입,
+    process_time as 처리일시, exec_at as LP_조회내역, serve_result_time as 수집기_처리시점, result as 서빙결과, note as 비고
+| fields 처리일시, 모듈명, 모듈_타입, 인스턴스_타입, 시스템ID, 대상ID, DM_건수, LP_조회내역, 수집기_처리시점, Apdex점수, 서빙결과, 비고 
+| order 처리일시, 모듈명, 모듈_타입, 인스턴스_타입, 시스템ID, 대상ID, DM_건수, LP_조회내역, 수집기_처리시점, Apdex점수, 서빙결과

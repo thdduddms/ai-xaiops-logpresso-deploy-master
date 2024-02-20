@@ -1,0 +1,25 @@
+파라미터 : []
+설명 : 대시보드 > 수집량  > APM 테이블별 수집 추이
+
+set convert_volume = if(isnull($("convert_volume")), 2, $("convert_volume"))
+| table duration=30d sys_logger_stats
+| union  [  
+	table duration=30d  sys_table_trends    
+  | join table [  
+  		confdb docs logpresso scheduled_queries      
+    	| search (contains(query_string, "wget") or contains(query_string,"dbquery")) and contains(query_string, "import")
+    	| eval table = groups(query_string, "\\| import (\\S+)")      
+    	| explode table      
+    	| fields table    
+    	| stats count by table 
+   		| fields table
+    ] 
+   | eval type = case(table == "xapm*", "APM", table == "ora*", "DPM", table == "apm*", "DPM", table == "*xaiops*", "로그이상탐지", "etc")
+   | rename table as logger_name
+  ]
+| search logger_name == "*xapm*"
+| eval logger_name = substr(logger_name, indexof(logger_name, "\\")+1)
+| eval logger_name = substr(logger_name, indexof(logger_name, ".")+1)
+| eval volume = round(volume/pow(1024,int($("convert_volume"))))
+| timechart span=1d sum(volume) by logger_name
+| eval xapm_active_txn = ceil(xapm_active_txn),  xapm_jvm_stat_summary = ceil(xapm_jvm_stat_summary),  xapm_remote_call = ceil(xapm_remote_call),  xapm_txn_detail = ceil(xapm_txn_detail),  xapm_txn_summary = ceil(xapm_txn_summary),  xapm_was_stat_summary = ceil(xapm_was_stat_summary),  xapm_server_time = ceil(xapm_server_time)

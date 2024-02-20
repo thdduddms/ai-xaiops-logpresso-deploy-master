@@ -1,0 +1,6 @@
+파라미터 : []
+설명 : null
+
+dbquery intermax_221
+select cast(business_id as varchar) as tx_code, cast(business_name as varchar) as tx_code_name
+from xapm_business_info

@@ -1,0 +1,19 @@
+파라미터 : [string entry, string process_name]
+설명 : 대시보드 > 프로세스 로그 > 원본로그보기 쿼리 제공
+
+# set process_name = "AI서빙모듈"
+| proc z_dash_process_log_view($("entry"))
+| search  process_name == upper($("process_name"))
+| fields entry, host_guid, host_ip, host_name_desc, process_name, base_path, normal_logfile, error_logfile
+| join type=left host_ip [
+    proc server_manage_connect_profiles(null) 
+    | search profiles_type == "SSH" 
+    | eval host_ip = valueof(configs, "host") 
+    | stats first(connect_profile_name) as connect_profile_name by host_ip
+ ]
+| eval 주의사항 = "$변수$는 수정해서 사용하기",
+      에러로그_파일보기 = if( error_logfile!="-", concat("sftp ", connect_profile_name, " cat ", replace(error_logfile, "$base_path$", base_path)), "없음" ),
+      기본로그_파일보기 = concat( "sftp ", connect_profile_name, " cat ", replace(normal_logfile, "$base_path$", base_path) ),
+      로그_목록보기 = concat("sftp ", connect_profile_name, " ls ", base_path)
+| rename process_name as 프로세스명
+| fields 프로세스명, 주의사항, 로그_목록보기, 기본로그_파일보기, 에러로그_파일보기

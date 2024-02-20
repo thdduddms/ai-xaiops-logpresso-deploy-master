@@ -1,0 +1,37 @@
+실행 주기 : 5 0 * * *
+경보 사용 : null
+
+set from= datetrunc(dateadd(now(), "day", -1), "1d")
+| set to= datetrunc(now(), "1d")
+| table  from=$("from") to=$("to") xapm_was_stat_summary
+| rename
+    active_txns as active_tx_count,
+    request_rate as call_count,
+    txn_elapse as response_time
+| eval
+    _time = datetrunc(_time, "1d"),
+    target_id = _target,
+    tps = (sum_txn_end_count/20)/3
+| stats
+    avg(call_count) as call_count, 
+    avg(active_tx_count) as active_tx_count, 
+    avg(tps) as tps, 
+    avg(response_time) as response_time 
+    by _time, system_id, target_id, _target
+| eval 
+	time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+    active_tx_count=floor(active_tx_count, 4),
+    call_count=floor(call_count, 4),
+    response_time=floor(response_time, 4),
+    tps=floor(tps, 4)
+| fields _time, system_id, target_id, call_count, active_tx_count, tps, response_time, time, _target
+| import exem_aiops_lngtrm_fcst_was
+| fields _time, system_id, _target
+| eval 
+	mart = "exem_aiops_lngtrm_fcst_was", 
+    lp_time = now(), 
+    _target = str(_target), 
+    module = "exem_aiops_lngtrm_fcst", 
+    inst_type = "was"
+| stats count by mart, _time, system_id, _target, lp_time, module, mart, inst_type
+| import exem_mart_result

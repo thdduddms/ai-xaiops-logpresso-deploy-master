@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: logpresso:logpresso-sdk-java:1.0.0-7-package">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/logpresso/logpresso-sdk-java/1.0.0-7-package/logpresso-sdk-java-1.0.0-7-package.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/logpresso/logpresso-sdk-java/1.0.0-7-package/logpresso-sdk-java-1.0.0-7-package-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/logpresso/logpresso-sdk-java/1.0.0-7-package/logpresso-sdk-java-1.0.0-7-package-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

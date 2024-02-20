@@ -1,0 +1,30 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+set from=datetrunc(dateadd(now(), "min", -3), "1m")
+| set to=datetrunc(now(), "1m")
+| table from=$("from") to=$("to") xapm_jvm_stat_summary
+| eval _time = datetrunc(now(), "1m"), qcount_sum = rand(10), qcount_avg = rand(6), count_sum = rand(10), count_avg = rand(6), elapsed_sum  =rand(10),
+	elapsed_avg = rand(6), error_count = rand(4), emcount_sum = rand(10), emcount_avg = rand(6), qpcount_sum = rand(10), qpcount_avg = rand(6),
+    cq_count_avg = rand(6), cq_count_sum = rand(10), q_elapsed_avg = rand(6), q_elapsed_sum = rand(10), status_rdy = rand(10), status_nrdy = rand(10),
+    fail_count = rand(10)
+    | fields _time, target_id, qcount_sum, qcount_avg, count_sum, count_avg,elapsed_sum, elapsed_avg, error_count, fail_count, emcount_sum, emcount_avg,
+    			qpcount_sum , qpcount_avg, cq_count_avg, cq_count_sum, q_elapsed_avg, q_elapsed_sum, status_rdy, status_nrdy, system_id, time
+| union [
+table from=$("from") to=$("to") xapm_jvm_stat_summary
+| eval _time = datetrunc(now(), "1m"), qcount_sum = rand(10), qcount_avg = rand(6), count_sum = rand(10), count_avg = rand(6), elapsed_sum  =rand(10),
+	elapsed_avg = rand(6), error_count = rand(4), emcount_sum = rand(10), emcount_avg = rand(6), qpcount_sum = rand(10), qpcount_avg = rand(6),
+    cq_count_avg = rand(6), cq_count_sum = rand(10), q_elapsed_avg = rand(6), q_elapsed_sum = rand(10), status_rdy = rand(10), status_nrdy = rand(10),
+    fail_count = rand(10)
+    | fields _time, target_id, qcount_sum, qcount_avg, count_sum, count_avg,elapsed_sum, elapsed_avg, error_count, fail_count, emcount_sum, emcount_avg,
+    			qpcount_sum , qpcount_avg, cq_count_avg, cq_count_sum, q_elapsed_avg, q_elapsed_sum, status_rdy, status_nrdy, system_id, time]
+| union [
+table from=$("from") to=$("to") xapm_jvm_stat_summary
+| eval _time = datetrunc(now(), "1m"), qcount_sum = rand(10), qcount_avg = rand(6), count_sum = rand(10), count_avg = rand(6), elapsed_sum  =rand(10),
+	elapsed_avg = rand(6), error_count = rand(4), emcount_sum = rand(10), emcount_avg = rand(6), qpcount_sum = rand(10), qpcount_avg = rand(6),
+    cq_count_avg = rand(6), cq_count_sum = rand(10), q_elapsed_avg = rand(6), q_elapsed_sum = rand(10), status_rdy = rand(10), status_nrdy = rand(10),
+    fail_count = rand(10)
+    | fields _time, target_id, qcount_sum, qcount_avg, count_sum, count_avg,elapsed_sum, elapsed_avg, error_count, fail_count, emcount_sum, emcount_avg,
+    			qpcount_sum , qpcount_avg, cq_count_avg, cq_count_sum, q_elapsed_avg, q_elapsed_sum, status_rdy, status_nrdy, system_id, time]
+| eval target_id = "tp01", system_id = 2,  time = string(_time, "yyyy-MM-dd HH:mm:ss")
+| import tp_dl

@@ -1,0 +1,12 @@
+파라미터 : [string from, string to, string db_id, int system_id]
+설명 : 근본원인분석(adhoc) DB Event
+
+# 근본원인분석(adhoc) DB Event **
+| table from=$("from") to=$("to") ora_db_wait
+| search db_id == int($("db_id")) and system_id == $("system_id")
+| search avg_wait_time > 0 and wait_class_no != 6 
+| rename avg_wait_time as wait_time 
+| eval time = string(time, "yyyy-MM-dd HH:mm:ss"), 
+   event_name = nvl(event_name, ""),
+   event_id = nvl(event_id, 0),
+   wait_time = nvl(wait_time, 0)

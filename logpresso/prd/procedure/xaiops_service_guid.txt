@@ -1,0 +1,13 @@
+파라미터 : [string tx_code, string from]
+설명 : 모니터링>서비스맵>서비스 장애분석>"E2E 거래목록" 버튼>팝업
+
+# E2E 거래 목록 팝업데이터 리턴 **
+| # set from=date($("from"), "yyyyMMddHHmm")
+| set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") xapm_txn_detail
+| eval tx_code=str(tx_code)
+| search tx_code == $("tx_code")
+| stats count, avg(txn_elapse) as txn_elapse  by tx_code, guid, tid, txn_name,  tx_code_name
+|#  rename tx_code as target_id
+| eval target_id=tx_code, _time = $("from"), time = string(_time, "yyyy-MM-dd HH:mm:ss"), tid = str(tid)
+| fields _time, guid,  target_id, txn_elapse, tid, time, txn_name, tx_code, tx_code_name

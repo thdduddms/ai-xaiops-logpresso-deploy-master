@@ -1,0 +1,39 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+setq [table duration=10m exem_aiops_abclst_txn 
+      | search system_id == 11
+      | stats max(_time) as last_time 
+      | eval resuming_time = dateadd(nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m")), "min", 1)
+      | fields resuming_time ] 
+| set from=datetrunc(dateadd(now(), "min", -8), "1m")
+| set to=datetrunc(dateadd(now(), "min", -4), "1m")
+| dbquery intermax_221
+select 
+        a._time as _time, a.time, a.txn_id, d.txn_name, cast(a.was_id as varchar) as was_id, cast(a.tid as varchar) as tid, c.class_name, c.method_name, c.method_type, b.method_seq, b.elapse_time, b.cpu_time, b.exec_count, b.error_count, 11 as system_id 
+from ( 
+        select _time, time, txn_id, was_id, tid, rn from ( 
+                select _time, time, txn_id, was_id, tid, row_number() over (partition by _time, txn_id order by random()) as rn from ( 
+                        select date_trunc('minute', time) as _time, to_char(time, 'YYYY-MM-DD HH24:MI:SS') as time, txn_id, was_id, tid 
+                        from xapm_txn_detail 
+                        where time >= :from and time >= :resuming_time and time < :to
+                ) a 
+        ) a 
+        where rn <= 30
+) a 
+inner join xapm_long_class_method b on a.tid = b.tid 
+inner join xapm_class_method c on b.method_id = c.method_id 
+inner join xapm_txn_name d on a.txn_id = d.txn_id
+| eval
+    cpu_time=round(cpu_time,5),
+    elapse_time=round(elapse_time,5),
+    error_count=round(error_count,5),
+    exec_count=round(exec_count,5),
+    _target = txn_id
+| import exem_aiops_abclst_txn
+| # stream forward=t 11.exem_aiops_abclst_txn
+| fields _time, system_id, _target
+| eval mart = "exem_aiops_abclst_txn", lp_time = datetrunc(now(),"1m")
+, _target = str(_target), module = "exem_aiops_abclst", inst_type = "txn", _target = "all"
+| stats count by mart, _time, system_id, _target, lp_time, module, mart, inst_type
+| import exem_mart_result

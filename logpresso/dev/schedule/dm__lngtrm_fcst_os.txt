@@ -1,0 +1,22 @@
+실행 주기 : 0 1 * * *
+경보 사용 : null
+
+set from=datetrunc(dateadd(now(), "day", -1), "1d") 
+| set to=datetrunc(dateadd(now(), "day", 0), "1d")
+| set floor_decimal =2
+
+| table from=$("from") to=$("to") exem_aiops_anls_inst_os
+| eval _time = datetrunc(_time, "1d")
+| stats avg(cpu_idle) as cpu_idle, avg(cpu_system) as cpu_system, avg(cpu_usage) as cpu_usage, avg(cpu_user) as cpu_user, avg(disk_free) as disk_free, avg(disk_total) as disk_total, avg(disk_usage) as disk_usage, avg(disk_used) as disk_used, avg(memory_free) as memory_free, avg(memory_total) as memory_total, avg(memory_usage) as memory_usage, avg(memory_used) as memory_used, avg(network_in_bytes) as network_in_bytes, avg(network_in_discards_bytes) as network_in_discards_bytes, avg(network_in_errors_count) as network_in_errors_count, avg(network_in_pkts) as network_in_pkts, avg(network_out_bytes) as network_out_bytes, avg(network_out_discards_bytes) as network_out_discards_bytes, avg(network_out_errors_count) as network_out_errors_count, avg(network_out_pkts) as network_out_pkts, avg(network_used) as network_used, avg(swap_free) as swap_free, avg(swap_total) as swap_total, avg(swap_usage) as swap_usage, avg(swap_used) as swap_used
+        by _time,  _target, system_id
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss")
+       , cpu_idle=floor(cpu_idle, $("floor_decimal")), cpu_system=floor(cpu_system, $("floor_decimal")), cpu_usage=floor(cpu_usage, $("floor_decimal")), cpu_user=floor(cpu_user, $("floor_decimal")), disk_free=floor(disk_free, $("floor_decimal")), disk_total=floor(disk_total, $("floor_decimal")), disk_usage=floor(disk_usage, $("floor_decimal")), disk_used=floor(disk_used, $("floor_decimal")), memory_free=floor(memory_free, $("floor_decimal")), memory_total=floor(memory_total, $("floor_decimal")), memory_usage=floor(memory_usage, $("floor_decimal")), memory_used=floor(memory_used, $("floor_decimal")), network_in_bytes=floor(network_in_bytes, $("floor_decimal")), network_in_discards_bytes=floor(network_in_discards_bytes, $("floor_decimal")), network_in_errors_count=floor(network_in_errors_count, $("floor_decimal")), network_in_pkts=floor(network_in_pkts, $("floor_decimal")), network_out_bytes=floor(network_out_bytes, $("floor_decimal")), network_out_discards_bytes=floor(network_out_discards_bytes, $("floor_decimal")), network_out_errors_count=floor(network_out_errors_count, $("floor_decimal")), network_out_pkts=floor(network_out_pkts, $("floor_decimal")), network_used=floor(network_used, $("floor_decimal")), swap_free=floor(swap_free, $("floor_decimal")), swap_total=floor(swap_total, $("floor_decimal")), swap_usage=floor(swap_usage, $("floor_decimal")), swap_used=floor(swap_used, $("floor_decimal"))
+| eval target_id=_target
+| fields _time, time, system_id, _target, target_id, cpu_idle, cpu_system, cpu_usage, cpu_user, disk_free, disk_total, disk_usage, disk_used, memory_free, memory_total, memory_usage, memory_used, network_in_bytes, network_in_discards_bytes, network_in_errors_count, network_in_pkts, network_out_bytes, network_out_discards_bytes, network_out_errors_count, network_out_pkts, network_used, swap_free, swap_total, swap_usage, swap_used
+| import exem_aiops_lngtrm_fcst_os
+
+| # evtctx - infra os
+| fields _time, system_id, _target
+| stats count by _time, system_id, _target
+| eval module = "exem_aiops_lngtrm_fcst", target_type = "os", key= concat(module, "_", target_type, "_", _target)
+| evtctxadd key=key topic="mart_result" maxrows=10 isnotnull(_target)

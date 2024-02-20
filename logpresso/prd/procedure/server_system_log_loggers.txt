@@ -1,0 +1,18 @@
+파라미터 : [int system_id]
+설명 : 설정>시스템>로그 >> 수집 설정 목록 조회(로그용) // 화면 들어갔을때 보여지는 ‘수집 여부’는 pg 데이터 보여줌. ‘수집 여부 조회’ 버튼 클릭시 업데이트 되는데 이때 프로시저 호출함.
+
+set system_id=2 
+| system loggers
+| search name=="log.*" 
+ | join type=left name [ memlookup op=list name=lookup_log_meta_info 
+         | rename lp_host as name, _host as _target
+         | fields _target, name ]
+| eval target_id=nvl(_target, name)
+| fields target_id, name, status
+| sort target_id
+
+| # [result_fields[
+target_id || string || null
+name || string || not null
+is_collect || string || not null
+| # ]result_fields]

@@ -1,0 +1,28 @@
+파라미터 : [int system_id, string was_id, string from]
+설명 : 모니터링 > 인스턴스 모니터링 > 서비스 목록
+
+# 인스턴스 모니터링 내 서비스 목록 위젯 데이터 리턴 - 해당 인스턴스의 서비스 목록 (min) **
+| set to = dateadd( date( $("from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") xapm_txn_detail
+| eval top_tid = str(tid)
+| join top_tid [ 
+        table from=$("from") to=$("to") xapm_etoe_data_set
+        | eval tid_str = split(tid_list , ","), top_tid=str(top_tid)
+        | explode tid_str
+        | fields _time, tid_str, top_tid
+   		 | join tid_str [
+              table from=$("from") to=$("to") xapm_txn_detail
+              | eval tid_str = str(tid), target_id = string(was_id)
+              | search target_id == $("was_id") 
+              | fields tid_str ]
+	| fields top_tid ]
+| eval target_id = string(was_id)
+| stats count by tx_code
+| join type=left tx_code [ dbquery intermax_intermax select tx_code, tx_code_name from xapm_tx_code_info ] 
+| eval tx_code_name = if(isnull(tx_code_name), tx_code, tx_code_name) |# 5.3 tx_code_name 임시처리임 나중에 삭제 (23.11.28 김민지)
+| fields tx_code, tx_code_name
+
+| # [result_fields[
+tx_code || int || not null
+tx_code_name || string || not null
+| # ]result_fields]

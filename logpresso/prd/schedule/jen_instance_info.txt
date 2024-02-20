@@ -1,0 +1,8 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+bypass | parsejson overlay=true | explode results | fields - line
+| eval instance_id = valueof(result, "instance_id"), was_id = concat(domain_id, "-", instance_id),was_name = valueof(result, "name"), is_alive = valueof(result, "status"),
+_time = datetrunc(now(), "1m"),
+| fields was_id, domain_id, instance_id, was_name, is_alive, _time
+| import jen_server_time

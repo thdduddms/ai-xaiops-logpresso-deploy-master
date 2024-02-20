@@ -1,0 +1,37 @@
+파라미터 : [int system_id, string host_name, string from, string to]
+설명 : 모니터링 > 인프라 모니터링 > 네트워크 사용률 차트
+
+# 인프라 모니터링 화면 내 네트워크 사용량 차트 데이터 리턴 **
+| table order=asc from=$("from") to=$("to") sentry_network_realtime_1m_resource
+| search _host == $("host_name")
+| eval 
+		_time = datetrunc(_time, "1m"),
+		time = str(_time, "yyyy-MM-dd HH:mm:ss")
+| stats sum(rx_bytes_delta) as rx_bytes_delta, sum(tx_bytes_delta) as tx_bytes_delta by description, _time, time, _host
+| eval convert = pow(1024,1),
+		rx_bytes_delta = if(rx_bytes_delta < 0, 0, floor(rx_bytes_delta/convert,4)),
+        tx_bytes_delta = if(tx_bytes_delta < 0, 0, floor(tx_bytes_delta/convert,4))
+| sort _time
+| rename _host as target_id
+        | join type=left description [
+        sentry
+        | fields host_name, ip_addrs, nics, os, guid
+        | search guid== $("host_name")
+        | eval device_nics = foreach(concat("device_ip=", _1, ", ", replace(replace(_2,"{", ""),"}","")), ip_addrs, nics)
+        | explode device_nics
+        | parsekv overlay=t field=device_nics pairdelim=", "
+        | fields os, guid, ip_type, name, device_ip
+        | eval ip_type = nvl(  typeof( ip(device_ip) ), "ipv6"  )
+        | fields guid, ip_type, name | rename name as description
+        ]
+| eval description = concat(description, "/", ip_type )
+| fields target_id, _time, description, rx_bytes_delta, tx_bytes_delta, time
+
+| # [result_fields[ 
+_time || date || not null
+description || string || not null
+rx_bytes_delta || double || not null
+target_id || string || not null
+time || string || not null
+tx_bytes_delta || double || not null
+| # ]result_fields]

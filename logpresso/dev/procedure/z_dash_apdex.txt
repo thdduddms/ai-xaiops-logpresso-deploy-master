@@ -1,0 +1,23 @@
+파라미터 : [datetime from, datetime to, string table_name]
+설명 : 대시보드 > Apdex > Apdex 타겟별 DM 저장 결과
+
+set from = if( isnull($("from")), datetrunc(dateadd(now(), "min", -10), "1m"), $("from"))
+| set to = if( isnull($("to")), datetrunc(dateadd(now(), "min", -1), "1m") , $("to"))
+| set system_id = if(isnull($("system_id")), 102, $("system_id"))
+| json "{}"
+| eval _time = daterange($("from"), $("to"), "1m")
+| explode _time
+| eval _time = datetrunc(_time, "1m"), result="비정상"
+| join type=left _time [
+    table duration=1h from=$("from") to=$("to")  $("table_name")
+    | eval _time = datetrunc(_time, "1m"), result="정상",  target_id = concat(inst_type, ") ", target_id)
+	]
+| join type=inner system_id [
+	table z_xaiops_system_id
+    | eval system_id = if(isnull(int($("system_id"))), system_id, int($("system_id")))
+	| fields system_id 
+    ]
+| eval term = concat( "Min-", format("%0,2d", datediff(_time, now(), "min")))
+| pivot first(result) rows target_id cols term
+| eval _result = if(field("Min-02") == "정상", 1, 0)+if(field("Min-03") == "정상", 1, 0)+if(field("Min-04") == "정상", 1, 0)+if(field("Min-05") == "정상", 1, 0)+if(field("Min-06") == "정상", 1, 0)+if(field("Min-07") == "정상", 1, 0)+if(field("Min-08") == "정상", 1, 0)+if(field("Min-09") == "정상", 1, 0)+if(field("Min-10") == "정상", 1, 0)
+| sort  _result, target_id

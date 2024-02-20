@@ -1,0 +1,14 @@
+실행 주기 : 5 0 * * *
+경보 사용 : null
+
+set from = datetrunc(dateadd(now(), "day", -1), "1d")
+| set to = datetrunc(now(), "1d")
+| table from=$("from") to=$("to") xapm_txn_detail
+| eval _time = datetrunc(_time, "1d")
+| stats 
+    count as exec_count, 
+    avg(txn_elapse) as response_time
+    by _time, txn_id, txn_name, system_id
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss"), _target = txn_id, response_time = floor(response_time, 4)
+| fields _time, txn_id, _target, txn_name, exec_count, response_time, time, system_id
+| import exem_aiops_lngtrm_fcst_txn

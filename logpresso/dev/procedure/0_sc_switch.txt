@@ -1,0 +1,15 @@
+파라미터 : [string procedure, string rerun]
+설명 : null
+
+# 예약쿼리 on/off 스위치 **
+ | proc 0_sc_lists() | drop
+ | set header = dict( "Content-Type", "application/json")
+| json "{}"
+ |# 프로시저명은 33_sc_exem_aiops_anls_inst_os, exem_aiops_anls_inst_os 두 형식 모두 사용 가능합니다.
+|# 프로시저명에 all 입력시 전체 종료 및 재기동
+ | eval 
+		procedure = $("procedure"), 
+        rerun = case($("rerun")== "true" or $("rerun") == "t", true, $("rerun") == "false" or $("rerun") == "f", false)
+| tojson | rename _json as body
+| eval HEADER = $("header"),  url="http://10.10.34.21:14568/scheduled"
+| wget method=post header=HEADER format=json body=body

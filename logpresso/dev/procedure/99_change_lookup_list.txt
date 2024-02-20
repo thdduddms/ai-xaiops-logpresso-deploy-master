@@ -1,0 +1,29 @@
+파라미터 : []
+설명 : 고객사에서 룩업 변경사항 적용시 변경사항 확인용 | patch_filepath, site_filepath 확인 후 실행
+
+# 아래 정보 변경해서 사용(패치파일경로, 고객사경로)
+| set patch_filepath="/data/logpresso/data/logpresso-core/lookup/"
+| set site_filepath="/data/logpresso/data/logpresso-core/lookup/" 
+
+| confdb docs logpresso-core lookup_storage_schema | explode fields  | eval field_name = valueof(fields, "field_name")  
+| stats array(field_name) as field_name by name  
+| eval key_name = valueof(field_name, 0), 
+		field_name = concat("concat(", substr(str(field_name), 1, len(str(field_name))-1), ")")  
+| eval field_name_2 = replace(replace(field_name, ",", "_2,"), ")", "_2)" )  
+
+| eval set_query = concat(" textfile ", concat($("patch_filepath"),name) ,".json\n
+| eval line = substr(line, 1, len(line)-1), 
+		line = replace(line, \"},\\\"\", \"^|^\\\"\"), line = split(line, \"^|^\") | explode line\n
+| rex field=line \"^\\\"(?<key>\\S+?)\\\"\\:(?<line>.*)\" | eval line=concat(line, \"}\"), line=replace(line , \"\\\":\\\"\", \"_2\\\":\\\"\"), key_2=key\n
+| parsejson overlay=t field=line | fields - line, _time \n
+| join type=full key [\n
+  textfile ", concat($("site_filepath"),name) ,".json\n
+  | eval line = substr(line, 1, len(line)-1), line = replace(line, \"},\\\"\", \"^|^\\\"\"), line = split(line, \"^|^\") | explode line\n
+  | rex field=line \"^\\\"(?<key>\\S+?)\\\"\\:(?<line>.*)\" | eval line=concat(line, \"}\") \n
+  | parsejson overlay=t field=line | fields - line, _time\n
+]")
+
+| eval order = substr(str(field_name_2), 7, len(str(field_name_2))-1)
+| eval order = concat( "\n| eval ", key_name, "_2=key\n| # fields ", order)
+| eval query = concat( set_query, "\n", concat(concat(concat( "| eval result = ", concat(field_name,"==", field_name_2)), "\n| search not(result) ")  , order) )
+| fields name, query

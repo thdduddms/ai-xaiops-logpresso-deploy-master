@@ -1,0 +1,29 @@
+실행 주기 : 10 0 * * *
+경보 사용 : null
+
+# 수집 설정 :: 수집 주기 = 60초 / 수집 시간 범위 = 00:00 ~ 00:05
+| set from=datetrunc(dateadd(now(), "day", -1), "1d")
+| set to=datetrunc(now(), "1m")
+| table from=$("from") to=$("to") ora_tablespace_info
+| eval time=datetrunc(_time, "1d")
+| sort limit=1 -_time by system_id, _target, tablespace_name
+| # total_space, free_space 단위 : MB
+| eval 
+	time=string(_time, "yyyy-MM-dd HH:mm:ss"),
+    tablespace_total=total_space,
+    tablespace_free=free_space,
+    tablespace_used=tablespace_total-tablespace_free,
+    tablespace_usage=round((tablespace_used/tablespace_total)*100, 1)
+| fields _time, system_id, tablespace_name, tablespace_total, tablespace_used, tablespace_usage, tablespace_free, _target
+
+| # XAIOps 대상만 필터링 하기
+| eval 
+	inst_type = nvl(inst_type, "db"),
+	key = concat(system_id, "|", inst_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)
+| fields - key, enable
+
+| rename system_id as sys_id, _time as time, _target as db_target_id
+
+| dboutput ai_server batchsize=2000 rowretry=f stoponfail=t table=lp_db_tablespace time, sys_id, db_target_id, tablespace_name, tablespace_used, tablespace_total, tablespace_usage

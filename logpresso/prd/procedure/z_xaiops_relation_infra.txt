@@ -1,0 +1,11 @@
+파라미터 : []
+설명 : host group <> host 관계 (memlookup)
+
+# 호스트그룹과 매핑된 host에 대한 값만 리턴한다 **
+| dbquery ai_server
+    select a.host_group_id as group_id, b.host_group_name as group_name, c.host_name as pg_target_name, c.target_id, c.sys_id as system_id, 'os' as inst_type, c.enable
+    from xaiops_host_group_host_relation a 
+    join xaiops_host_group b on a.host_group_id =b.host_group_id 
+    join xaiops_host c on a.host_id =c.host_id
+| eval key = concat(group_name, "_", target_id), group_type = "host"
+| memlookup op=build name=z_xaiops_relation_infra key=key system_id, inst_type, target_id, enable, group_type, group_id, group_name, pg_target_name

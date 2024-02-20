@@ -1,0 +1,7 @@
+파라미터 : [string start, string end, int system_id]
+설명 : null
+
+table from=$("start") to=$("end") xapm_txn_detail 
+| search first == 1 
+| search system_id == $("system_id")
+| stats count as exec_count by system_id, txn_id, txn_name

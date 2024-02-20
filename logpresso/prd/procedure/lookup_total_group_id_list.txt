@@ -1,0 +1,108 @@
+파라미터 : []
+설명 : 이벤트예측) group_id 별 타겟 id를 리턴하는 룩업프로시저 (host/inst/code)
+
+# codeGroup 기준으로 학습된 대상
+| dbquery ai_server 
+	select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list 
+    from aiops_config_service 
+    where module='exem_aiops_event_fcst' and inst_type='codeGroup'
+| parsejson overlay=t field=group_target_list
+| explode code
+| rename code as target_id 
+| eval inst_type="code" 
+| fields system_id, group_type, group_id, module, target_id, inst_type
+
+| # hostGroup 기준으로 학습된 대상
+| union [ 
+        dbquery ai_server 
+        	select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list 
+            from aiops_config_service 
+            where module='exem_aiops_event_fcst' and inst_type='hostGroup'
+        | parsejson overlay=t field=group_target_list
+        | explode os
+        | rename os as target_id 
+        | eval inst_type="os" 
+        | fields system_id, group_type, group_id, module, target_id, inst_type ] 
+
+| # instanceGroup 기준으로 학습된 대상
+| union [ 
+      dbquery ai_server 
+      select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list 
+      from aiops_config_service 
+      where module='exem_aiops_event_fcst' and inst_type='instanceGroup'
+      | parsejson overlay=t field=group_target_list
+      | explode db
+      | rename db as target_id 
+      | eval inst_type="db" 
+      | fields system_id, group_type, group_id, module, target_id, inst_type ] 
+| union [
+       dbquery ai_server 
+      	 select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list 
+       	from aiops_config_service 
+       	where module='exem_aiops_event_fcst' and inst_type='instanceGroup'
+      | parsejson overlay=t field=group_target_list
+      | explode was
+      | rename was as target_id 
+      | eval inst_type="was" 
+      | fields system_id, group_type, group_id, module, target_id, inst_type ]
+| union [
+       dbquery ai_server 
+       	select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list 
+        from aiops_config_service 
+        where module='exem_aiops_event_fcst' and inst_type='instanceGroup'
+      | parsejson overlay=t field=group_target_list
+      | explode tp
+      | rename tp as target_id 
+      | eval inst_type="tp" 
+      | fields system_id, group_type, group_id, module, target_id, inst_type ]
+| union [
+       dbquery ai_server 
+       	select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list 
+        from aiops_config_service 
+        where module='exem_aiops_event_fcst' and inst_type='instanceGroup'
+      | parsejson overlay=t field=group_target_list
+      | explode web
+      | rename web as target_id 
+      | eval inst_type="web" 
+      | fields system_id, group_type, group_id, module, target_id, inst_type ]
+ | union [
+       dbquery ai_server 
+       	select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list 
+        from aiops_config_service 
+        where module='exem_aiops_event_fcst' and inst_type='instanceGroup'
+      | parsejson overlay=t field=group_target_list
+      | explode network
+      | rename network as target_id 
+      | eval inst_type="network" 
+      | fields system_id, group_type, group_id, module, target_id, inst_type ]     
+ |# 테스트용     
+  | union [
+       dbquery ai_server 
+       	select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list 
+        from aiops_config_service 
+        where module='exem_aiops_event_fcst' and inst_type='hostGroup'
+      | parsejson overlay=t field=group_target_list
+      | explode was
+      | rename was as target_id 
+      | eval inst_type="was" 
+      | fields system_id, group_type, group_id, module, target_id, inst_type ]          
+      
+      
+| search isnotnull(target_id)
+| eval key = concat(system_id, "|", inst_type, "|", target_id, "|", group_id), 
+		group_id=str(group_id), _target=str(target_id), 
+        target_id=str(target_id)
+| order key, system_id,inst_type, group_type, group_id, target_id, biz_id, host_group_id, inst_group_id, target_ids
+| memlookup op=build name=lookup_total_group_id_list key=key system_id,inst_type, group_id,group_type, target_id,  _target 
+| # [ 
+dbquery ai_server select sys_id as system_id, inst_type as group_type, target_id as group_id, module, group_target_list from aiops_config_service where module='exem_aiops_event_fcst' and inst_type='hostGroup' 
+| # parsejson overlay=t field=group_target_list 
+| eval group_target_list = replace(group_target_list, "{", ""), group_target_list = replace(group_target_list, "}", ""), group_target_list = replace(group_target_list, "\"", "")
+| eval group_target_list = split(group_target_list, ", ")
+| explode group_target_list
+| eval inst_type = substr(group_target_list, 0, indexof(group_target_list, ":")), 
+		group_target_list = trim(group_target_list),
+		target_id = substr(group_target_list, indexof(group_target_list, ":")+2, len(group_target_list)-1)
+| eval target_id = split(target_id, ",")
+| explode target_id
+]

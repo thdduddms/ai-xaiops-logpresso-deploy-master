@@ -1,0 +1,36 @@
+실행 주기 : 3 0 * * *
+경보 사용 : null
+
+set time = datetrunc(ago("1d"), "1d")
+| set partition_key = int(concat(string($("time"), "yyMMdd"), "000")) 
+| dbquery maxgauge_222 
+	select
+		partition_key,
+		2 as system_id,
+		cast(db_id as varchar) as _target,
+		db_id,
+		sql_uid,
+		seq,
+		sql_text,
+		'fepdb01' as schema
+	from
+		ORCL2.apm_sql_list
+	where
+		partition_key >= :partition_key
+| union [ 
+	dbquery maxgauge_222 
+    	select 
+			partition_key,
+			102 as system_id,
+			cast(db_id as varchar) as _target,
+			db_id,
+			sql_uid,
+			seq,
+			sql_text,
+			'mcidb2' as schema
+		from
+			ORCL1.apm_sql_list
+		where
+			partition_key >= :partition_key
+            ]
+| import apm_sql_list | drop

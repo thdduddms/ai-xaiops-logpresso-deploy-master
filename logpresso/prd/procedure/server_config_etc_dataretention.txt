@@ -1,0 +1,25 @@
+파라미터 : []
+설명 : 설정>기타>테이블 보관주기
+
+# /config/etc/dataRetention** 
+| system tables verbose=t
+| eval min_day = str(min_day, "yyyy-MM-dd"), max_day = str(max_day, "yyyy-MM-dd")
+| fields table, min_day, max_day, retention_policy, disk_usage
+| eval key = table
+| lookup lu_data_chart_table key output object, use_yn, desc
+| search use_yn == "Y"
+| eval retention_policy = replace(retention_policy, "days", ""), index_disk_usage = 0
+| sort table
+| fields table, min_day, max_day, retention_policy, disk_usage, desc, index_disk_usage, key, object, use_yn
+| # [result_fields[ 
+table || string || not null
+min_day || string || null
+max_day || string || null
+retention_policy || string || null
+disk_usage || long || not null
+desc || string || null
+index_disk_usage || int || not null
+key || string || not null
+object || string || not null
+use_yn || string || not null
+| # ]result_fields]

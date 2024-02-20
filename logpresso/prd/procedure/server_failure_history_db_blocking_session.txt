@@ -1,0 +1,17 @@
+파라미터 : [int system_id, string target_id, string from]
+설명 : 근본원인분석 DB - blocking session 리턴
+
+# 근본원인분석(adhoc) DB Blocking Session **
+| set to=dateadd($("from"), "min", 1) 
+| table from=$("from") to=$("to") ora_session_stat, ora_session_stat_tibero
+| search _target == $("target_id") and system_id == $("system_id") and isnotnull(lock_holder_sid)
+| fields sid, lock_holder_sid 
+| eval sid=long(sid), lock_holder_sid=long(lock_holder_sid)
+| rename sid as wait_sid, lock_holder_sid as lock_sid 
+
+| # [ 변경전 table from=$("from") to=$("to") ora_session_stat, ora_session_stat_tibero
+| search _target == $("target_id") and system_id == $("system_id") and isnotnull(lock_holder_sid)
+| eval time=string(time, "yyyy-MM-dd HH:mm:ss")
+| fields sid, lock_holder_sid 
+| eval sid=long(sid), lock_holder_sid=long(lock_holder_sid)
+| rename sid as wait_sid, lock_holder_sid as lock_sid ]

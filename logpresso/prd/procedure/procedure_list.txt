@@ -1,0 +1,4 @@
+파라미터 : []
+설명 : 
+
+confdb docs araqne-logdb procedures | fields name, query_string, parameters, description

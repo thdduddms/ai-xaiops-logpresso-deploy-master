@@ -1,0 +1,8 @@
+파라미터 : []
+설명 : 관리자용] 쿼리 시작만 있고 종료가 없는 경우 검색(1d)
+
+table duration=1d araqne_query_logs
+| stats count by query_id, query_string
+| # 쿼리 시작만 있고 종료가 없는 경우 검색
+| search count == 1
+| search not(in(query_string, "*table * araqne_query_logs*")) 

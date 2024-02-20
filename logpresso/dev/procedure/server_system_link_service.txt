@@ -1,0 +1,33 @@
+파라미터 : [int system_id, string inst_type, string from, string to]
+설명 : 설정 > 시스템 > 시스템 연동 >> 거래코드 main
+
+# 설정 > 시스템 연동 > 거래코드 조회 **
+| # 10.30
+| # set from=nvl($("from"), datetrunc(now(), "1d")) | # set from=datetrunc(now(), "1d")
+| # set to = dateadd( date($("from"), "yyyyMMdd"), "day", 1)
+| table from=$("from") to=$("to") xapm_txn_detail
+| search first==1 and isnotnull(tx_code)
+| stats count, first(txn_id) as txn_id by tx_code
+
+| join type=left tx_code [
+	dbquery intermax_intermax
+	select tx_code, tx_code_name from xapm_tx_code_info
+]
+| eval tx_code_name = nvl(tx_code_name, tx_code)
+
+| join type=left txn_id [
+	dbquery intermax_intermax
+	select txn_id, txn_name from xapm_txn_name
+]
+| eval txn_name = nvl(txn_name, txn_id)
+
+
+| rename tx_code as target_id
+| fields target_id, tx_code_name, txn_id, txn_name
+
+| # [result_fields[
+target_id || string || not null
+tx_code_name || string || not null
+txn_id || string || not null
+txn_name || string || not null
+| # ]result_fields]

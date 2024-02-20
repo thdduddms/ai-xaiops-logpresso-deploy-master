@@ -1,0 +1,23 @@
+파라미터 : [int system_id, string target_id, string from, string to]
+설명 : 학습) 부하패턴클러스터링 분석 (was / adhoc_was_workload_pattern_clustering)
+
+# 부하패턴분석 was 학습데이터 호출 프로시저 **
+| table from=$("from") to=$("to") xapm_txn_summary
+| search _target == $("target_id") and system_id == $("system_id") 
+| rename 
+   txn_exec_count as execution_count, 
+   txn_elapse_sum as elapsed_time, 
+   txn_cpu_time_sum as cpu_time, 
+   sql_elapse_sum as sql_elapsed, 
+   fetch_time_sum as fetch_time, 
+   remote_elapse_sum as remote_time, 
+   open_conn_sum as open_conn_count, 
+   exception_sum as exception_count 
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss"), 
+   avg_elapsed_time = floor(elapsed_time / case(execution_count == 0, 1, execution_count), 4),
+   execution_count = floor(execution_count, 4),
+   elapsed_time = floor(elapsed_time, 4),
+   cpu_time = floor(cpu_time, 4),
+   sql_elapsed = floor(sql_elapsed, 4),
+   fetch_time = floor(fetch_time, 4),
+   remote_time = floor(remote_time, 4)

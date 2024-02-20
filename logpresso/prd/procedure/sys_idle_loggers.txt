@@ -1,0 +1,10 @@
+파라미터 : []
+설명 : null
+
+system loggers 
+| search status == "running" 
+| eval idle = datediff(nvl(last_write_at, last_start_at), now(), "min") 
+| eval name = concat(namespace, "\\", name) 
+| search idle >= 1440 
+| sort limit=100 -idle 
+| fields name, idle, log_count

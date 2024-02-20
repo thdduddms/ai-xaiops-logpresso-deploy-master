@@ -1,0 +1,26 @@
+파라미터 : [string type]
+설명 : 수집설정 스크립트 생성용 배치파일 생성
+
+lookuptable lu_create_conn_profile
+| search type == $("type", "SSH") 
+| eval create_batch = concat("logpresso.createSshProfile", " <<EOF\n", profile_name,  "\n", host, "\n", port, "\n", username, "\n", password, "\n", timeout, "\n", server_alive_interval, "\n",  granted_users, "\n",  granted_groups, "\n",   "EOF\n", "\n" ),
+        remove_batch = concat("logpresso.removeSshProfile", " ", profile_name, " <<EOF\n", "\n",   "EOF\n", "\n" )
+| fields create_batch, remove_batch
+| stats values(create_batch) as create_batch,  values(remove_batch) as remove_batch
+| eval create_batch = strjoin("", create_batch) ,  remove_batch = strjoin("", remove_batch)
+| eval create_batchs = concat( "date =============================\n", strjoin("date ------------------------------\n", create_batch)), 
+			 remove_batchs = concat( "date =============================\n", strjoin("date ------------------------------\n", remove_batch))
+| outputtxt overwrite=t partition=t encoding="UTF-8" script/job/{now:yyyyMMdd}/create_logger.batch create_batch
+| outputtxt overwrite=t partition=t encoding="UTF-8" script/job/{now:yyyyMMdd}/remove_logger.batch remove_batch
+| fields create_batch, remove_batch
+| union [ json  "{}" | eval cli_cmd = concat(
+										"※ 아래 문구만 나오는 경우, 과정에 오류가 있습니다. 매개변수를 확인하세요. \n",
+										"\n1. 수집기 중지>생성>시작\n",
+										"batch.executeFile script/job/", str(now(), "yyyyMMdd"), "/create_logger.batch\n",
+                                        "batch.executeFile script/job/", str(now(), "yyyyMMdd"), "/remove_batch.batch\n",
+                                        "\n2. 생성 결과 확인\n",      
+                                        "logapi.loggers ", "[\n",
+                                        "logpresso.loggers ", "[\n",
+                                        "\n기타.\n",
+                                        "-> 로컬 수집 HA설정 작업 (logpresso.runAsPrimaryLogger, logpresso.runAsBackupLogger / logpresso.runAsStandaloneLogger")
+                                        ]

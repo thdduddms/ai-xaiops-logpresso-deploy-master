@@ -1,0 +1,48 @@
+# deployer server
+server:
+  port: 24567
+
+#log4j2
+logging:
+  path: classpath:log4j2.xml
+
+# logpresso - 반드시 root 만 사용해야한다.
+logpresso:
+  source:
+    host: 10.10.34.21
+    port: 18888
+    user: root
+    password: aiaiaiai1@#
+    system_id: 102
+  target:
+    host: 10.10.34.11
+    port: 18888
+    user: root
+    password: aiaiaiai1@#
+    system_id: 2
+    backup_table_name: deploy_backup
+    history_table_name: deploy_history
+    # deploy_backup / v3p / snappy / row
+
+# git에서 관리할 logpresso
+git:
+  logpresso:
+    source:
+      host: 10.10.34.21
+      port: 18888
+      user: root
+      password: aiaiaiai1@#
+    target:
+      host: 10.10.34.11
+      port: 18888
+      user: root
+      password: aiaiaiai1@#
+# path의 마지막 '/' 입력 필수
+  path:
+    textfile: './logpresso/'
+
+# 스프링부트 버전업 이후로 일부 라이브러리와 swagger 의 호환성 문제 해결
+spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher

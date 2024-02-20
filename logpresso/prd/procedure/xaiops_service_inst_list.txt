@@ -1,0 +1,9 @@
+파라미터 : [int system_id, string tx_code, string from]
+설명 : 모니터링 > 서비스 / 모니터링, 장애분석
+
+# 서비스 모니터링 내 서비스 통과구간 위젯 데이터 , 서비스 장애분석 인스턴스 데이터 리턴 **
+| set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1)
+| set from = dateadd( date( $("from"), "yyyyMMddHHmm"), "min", -9)
+| table from=$("from") to=$("to") xapm_txn_detail 
+| search system_id == $("system_id") and string(tx_code) == $("tx_code") | stats count by was_id
+| rename was_id as target_id

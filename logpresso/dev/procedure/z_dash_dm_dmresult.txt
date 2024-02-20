@@ -1,0 +1,27 @@
+파라미터 : [datetime from, datetime to]
+설명 : 대시보드 > DM 저장결과 > DM 모듈별 저장 결과
+
+set from = if( isnull($("from")), datetrunc(dateadd(now(), "min", -6), "1m"), $("from"))
+| set to = if( isnull($("to")), datetrunc(dateadd(now(), "min", -1), "1m"), $("to"))
+| json "{}"
+| eval _time = daterange($("from"), $("to"), "1m")
+| explode _time
+| eval _time = datetrunc(_time, "1m"), key = 1, count = 0
+| join type=inner key [
+ lookuptable lu_data_chart_table
+| search use_yn == "Y" and object == "DataMart" and _table != "apdex*" and _table != "exem_aiops_lngtrm*" and _table !="exem_aiops_anls_sys_e2e"
+| eval mart = _table, key = 1
+| fields key, mart
+  ]
+| join type=left _time, mart [
+  table from=$("from") to=$("to") exem_mart_result
+  | search inst_type != "service"
+  ]
+| join type=inner system_id [
+	table z_xaiops_system_id
+    | eval system_id = if(isnull(int($("system_id"))), system_id, int($("system_id")))
+	| fields system_id  ]
+|   eval mart = replace(mart, "exem_aiops_", "")
+|  pivot sum(count) rows _time cols mart
+| eval _time=str(_time, "yyyy-MM-dd HH:mm")
+| sort -_time

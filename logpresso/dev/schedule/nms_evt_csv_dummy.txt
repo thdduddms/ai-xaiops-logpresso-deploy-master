@@ -1,0 +1,34 @@
+실행 주기 : */4 * * * *
+경보 사용 : null
+
+csvfile /home/aic1/logpresso/script/event_sample.csv
+| rename 
+	CODE as code, 
+    DEV_IP as dev_ip, 
+    DEV_NAME as dev_name, 
+    DIS_DEV_NAME as dis_dev_name, 
+    EVT_LEVEL as evt_level, 
+	EVT_LEVEL_STR as evt_level_str, 
+    EVT_NAME as evt_name, 
+    EVT_VALUES as evt_values, 
+    IF_ALIAS as if_alias, 
+    IF_NAME as if_name, 
+	MNG_NO as mng_no, 
+    PROGRESS_STATE as progress_state, 
+    RECEIPT_MEMO as receipt_memo, 
+    SEQ_NO as seq_no, 
+    SRC_IDX as src_idx, 
+	SRC_INFO as src_info, 
+    SRC_TYPE_STR as src_type_str, 
+    STATUS as status, 
+    SUM_SEC as sum_sec, 
+    YMDHMS as ymdhms
+    
+|# 운이 좋을 때만 이벤트가 발생하도록 함
+| eval 
+	seq = seq() , 
+    rand1 = rand(43), 
+    rand2= rand(43), 
+    rand3= rand(43)
+| search seq == rand1 or seq == rand2 or seq == rand3
+| import nms_evt_csv

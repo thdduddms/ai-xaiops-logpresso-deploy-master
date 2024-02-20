@@ -1,0 +1,46 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 인터맥스 5.3 거래코드 데이터 test용 ** code (service) dds 필수값 : _time, _target, guid **
+
+set system_id =$("system_id")
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(dateadd(now(), "min", -1), "1m"))
+
+| table from=$("from") to=$("to") xapm_txn_detail
+
+| search _host=="102.14*" 
+| search first==1 and isnotnull(tx_code)
+
+| eval _time = datetrunc(_time, "1m"), top_tid = string(tid)
+
+| fields _time, tx_code, txn_elapse, exception, top_tid
+
+| join _time, top_tid [ 
+	table from=$("from") to=$("to") xapm_etoe_data_value    
+        | eval 
+                        _time = datetrunc(_time, "1m")
+                        , top_tid = string(top_tid)
+                        , tier_elapse = tier_elapse/1000
+                        , tier_remote_elapse = tier_remote_elapse/1000
+                        , tier_id = concat("0",string(tier_id))
+        | eval tier_elapse = tier_elapse-tier_remote_elapse
+        | fields _time, top_tid, tier_id, tier_elapse 
+]
+
+| fields _time, tx_code, txn_elapse, exception, top_tid, tier_id, tier_elapse 
+
+| pivot avg(tier_elapse)
+	by _time, tx_code, txn_elapse, exception, top_tid
+	for tier_id
+
+| rename  06 as elapse06, 07 as elapse07, 08 as elapse08
+
+| stats 
+	count as exec_count
+	, sum(exception) as error_count
+	, avg(txn_elapse) as elapse_avg
+	, avg(elapse06) as elapse06_avg, avg(elapse07) as elapse07_avg, avg(elapse08) as elapse08_avg
+	, first(top_tid) as guid
+	by _time, tx_code
+| rename tx_code as _target
+| eval system_id = $("system_id")
+| fields _time, system_id, _target, exec_count, error_count, elapse_avg, elapse06_avg, elapse07_avg, elapse08_avg, guid

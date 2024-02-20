@@ -1,0 +1,42 @@
+파라미터 : [int system_id, string tx_codes, string from]
+설명 : 모니터링 > 서비스맵
+
+# 서비스맵 육각형 클릭시 나오는 팝업 데이터 리턴 **
+| set from = $("from")
+| set to = dateadd(date($("from"), "yyyyMMddHHmm"), "min", 1)
+| set start = dateadd( date($("from"), "yyyyMMddHHmm"), "day", -7)
+| set end = dateadd( $("to"), "day", -7)
+| table from=$("from") to=$("to") exem_aiops_anls_inst_code
+| search system_id == $("system_id")
+| join _target, system_id [
+		json "{}" 
+        | eval _target = split($("tx_codes"), ",") , system_id = $("system_id") 
+        | explode _target
+]
+| rename _target as target_id
+| fields _time, system_id, target_id, exec_count, elapse_avg, error_count, txn_name
+| join type=left target_id, system_id, _time, txn_name [
+	table from=$("start") to=$("end") exem_aiops_anls_inst_code
+    | search system_id == $("system_id")
+    | eval _time = date($("from"), "yyyyMMddHHmm"), last_week_time = $("start")
+    | rename tx_code as target_id, exec_count as last_week_exec_count, elapse_avg as last_week_elapse_avg, 
+    				error_count as last_week_error_count
+    | fields _time, system_id, target_id, last_week_exec_count, last_week_elapse_avg, last_week_error_count, last_week_time, txn_name
+]
+| eval time = string(_time, "yyyy-MM-dd HH:mm:ss")
+| fields _time, time, last_week_time, system_id, target_id, exec_count, elapse_avg, error_count, 
+			last_week_exec_count, last_week_elapse_avg, last_week_error_count
+            
+| # [result_fields[
+_time || date || not null
+elapse_avg || double || not null
+error_count || long || not null
+exec_count || long || not null
+last_week_elapse_avg || object || null
+last_week_error_count || object || null
+last_week_exec_count || object || null
+last_week_time || object || null
+system_id || int || not null
+target_id || string || not null
+time || string || not null
+| # ]result_fields]

@@ -1,0 +1,17 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+wget url="http://10.10.31.214:9090/api/v1/query?query=sum(increase(node_cpu_seconds_total{mode='user'}[1m]))/sum(increase(node_cpu_seconds_total[1m]))*100" | eval stat_name = "cpu_user", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=sum(increase(node_cpu_seconds_total{mode='system'}[1m]))/sum(increase(node_cpu_seconds_total[1m]))*100" | eval stat_name = "cpu_sys", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ] 
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=(sum(node_memory_MemTotal_bytes)-sum(node_memory_MemFree_bytes)-sum(node_memory_Buffers_bytes)-sum(node_memory_Cached_bytes)-sum(node_memory_Slab_bytes))/1024^2" | eval stat_name = "memory_used", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=sum(increase(node_cpu_seconds_total{mode='iowait'}[1m]))/sum(increase(node_cpu_seconds_total[1m]))*100" | eval stat_name = "cpu_wait", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=(sum(node_memory_SwapTotal_bytes)-sum(node_memory_SwapFree_bytes))/1024^2" | eval stat_name = "swap_used", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=(sum(increase(node_cpu_seconds_total{mode='user'}[1m]))%2Bsum(increase(node_cpu_seconds_total{mode='system'}[1m]))%2Bsum(increase(node_cpu_seconds_total{mode='iowait'}[1m])))/sum(increase(node_cpu_seconds_total[1m]))*100" | eval stat_name = "cpu_usage", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=sum(floor(increase(node_forks_total[1m])))" | eval stat_name = "fork", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=(sum(rate(node_disk_read_bytes_total[1m]))%2Bsum(rate(node_disk_written_bytes_total[1m])))/1024"  | eval stat_name = "disk_readwrite", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=(sum(rate(node_disk_reads_completed_total[1m]))%2Bsum(rate(node_disk_writes_completed_total[1m])))" | eval stat_name = "disk_iops", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=(sum(rate(node_network_receive_bytes_total[1m]))%2Bsum(rate(node_network_transmit_bytes_total[1m])))/1024" | eval stat_name = "network_readwrite", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| union [ wget url="http://10.10.31.214:9090/api/v1/query?query=(sum(rate(node_network_receive_packets_total[1m]))%2Bsum(rate(node_network_transmit_packets_total[1m])))" | eval stat_name = "network_iops", host_name = "ebmciapos01", ip = "10.10.31.214", system_id = 102 ]
+| eval _time=datetrunc(dateadd(now(), "min", -1), "1m")
+
+| import prometheus_stat_1m

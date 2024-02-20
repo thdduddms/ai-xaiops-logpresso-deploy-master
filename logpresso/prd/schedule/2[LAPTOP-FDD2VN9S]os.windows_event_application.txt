@@ -1,0 +1,6 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+table duration=1m lp_dev:log_os | search _host == "102[LAPTOP-FDD2VN9S]os.windows_event_application"
+| eval _time = _time, _host = _host, system_id = 2, _host = "2[DESKTOP-mjkim]os.event__application"
+| import log_os

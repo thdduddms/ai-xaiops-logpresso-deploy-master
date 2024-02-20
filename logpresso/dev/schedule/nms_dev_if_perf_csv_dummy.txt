@@ -1,0 +1,37 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+csvfile /home/aic1/logpresso/script/perf_if.csv
+| eval _time = date(YMDHMS, "yyyyMMddHHmmss")
+| rename 
+	DEV_IP as dev_ip, 
+    IF_ALIAS as if_alias, 
+    IF_IDX as if_idx, 
+    IF_NAME as if_name, 
+    INBPS as inbps, 
+    INPPS as inpps, 
+	MNG_NO as mng_no, 
+    OUTBPS as outbps, 
+    OUTPPS as outpps, 
+    SYSUPTIME as sysuptime, 
+    USER_DEV_NAME as user_dev_name, 
+	YMDHMS as ymdhms, 
+    YYYYMMDD as yyyymmdd
+| fields - yyyymmdd, ymdhms
+| sort limit=1 -_time by dev_ip, user_dev_name, if_idx, if_name, mng_no
+| eval 
+	_time = datetrunc(now(), "1m"), 
+    inbps = double(inbps), 
+    outbps = double(outbps), 
+    outpps = double(outpps), 
+    inpps = double(inpps)
+| eval 
+	inbps = inbps - rand(1000) + rand(1000), outbps = outbps - rand(10000) + rand(10000) |# , outpps = outpps - rand(1000) + rand(1000), inpps = inpps - rand(1000) + rand(1000) 
+| eval 
+	inbps = if(inbps < 0, rand(500), inbps), 
+    outbps = if(outbps < 0 , rand(1000), outbps)
+| eval 
+	inbps = floor(inbps, 2), 
+    outbps = floor(outbps, 2)
+| search _time > dateadd(now(), "min", -1)
+| import nms_if_perf_csv 

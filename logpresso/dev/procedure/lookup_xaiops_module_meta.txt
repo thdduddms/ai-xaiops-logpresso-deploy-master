@@ -1,0 +1,19 @@
+파라미터 : []
+설명 : XAIOps 모듈 정보
+
+dbquery ai_server 
+	select module, module_name, module_type, is_auto_training, is_window, module_desc, support_types, is_biz_train, train_process_desc 
+    from xaiops_module_meta
+| eval support_types = split(support_types, ",")
+| explode support_types
+| rename support_types as inst_type
+| join type=left module [ 
+	json "{}" 
+    | eval module = "exem_aiops_anls_log", 
+    		log_category=array("os", "was", "web", "db", "middleware", "etc") 
+      | explode log_category
+	]
+| eval 
+	mart = if( module=="exem_aiops_anls_log", concat( module, "_", log_category), concat( module, if( isnull(inst_type), null, concat("_", inst_type)) )), 
+    mart_name = if( module=="exem_aiops_anls_log", concat(module_name, " (", inst_type, "-", log_category, ")"), concat( module_name, if(isnull(inst_type), null, concat(" (", inst_type, ")")) ) )
+| memlookup op=build name=lookup_xaiops_module_meta key=mart module, module_name, inst_type, log_category, mart_name, module_type, is_auto_training, is_window, module_desc, is_biz_train, train_process_desc

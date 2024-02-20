@@ -1,0 +1,5 @@
+파라미터 : []
+설명 : 관리자용] 예약쿼리 목록 조회
+
+confdb docs logpresso scheduled_queries
+| fields title, is_enabled, cron_schedule, query_string

@@ -1,0 +1,17 @@
+파라미터 : [int system_id, string from, string to]
+설명 : 확인필요한 프로시저 상태 테스트용
+
+json "{"lp_proc_status" :\"확인필요\"}"
+| # [ 해당 필드 있는지 체크하고 있으면 해당 메시지 리턴. / 해당 필드 없으면 데이터 포맷 오류로 보고 에러 리턴.
+# 설정 > 시스템 연동 > 거래코드 조회 **
+| set from= $("from")
+| set to = dateadd( date($("to"), "yyyyMMdd"), "day", 1)
+| table from=$("from") to=$("to") exem_aiops_fcst_code
+| search system_id==$("system_id") and isnotnull(txn_name)
+| stats count, first(txn_id) as txn_id, first(txn_name) as txn_name by _target, tx_code_name, tx_code
+| union [ dbquery intermax_221
+select txn_id, txn_name from xapm_txn_name limit 30 
+| eval tx_code=seq() | search tx_code > 10 
+| eval tx_code=str(tx_code), tx_code_name = concat("TEST_", tx_code), count =1, _target=tx_code ] 
+| eval count = long(count)
+| sort -count

@@ -1,0 +1,84 @@
+파라미터 : [int system_id, string host_name, string from, string to]
+설명 : 경남 개발건..
+
+# set to = dateadd( date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table order=desc from=$("from") to=$("to") sentry_top_realtime_1s_resource
+| # sentry_top_realtime_test > unix 서버들 수집 테스트 테이블
+| search _host == $("host_name") 
+| eval _time = datetrunc(_time, "1s") 
+| stats first(line) as line by _time, _host
+
+| join type=left _host [ 
+	sentry 	
+    | rename guid as _host 
+    | fields _host, os, phy_total 
+    | rename phy_total as mem_phy_total 
+    ]
+|  eval line = if(os != "HP-UX", line, 
+                     replace(replace(replace(replace(replace(replace(replace(line, "\r", ""), "[B", "\n"), "[2B", "\n\n"), "[m[H[2J", ""), "[0m[2J[H" ,""), "[K", ""), "(\\\\[\\d+C)","  ","re")), 
+			line = if(os != "HP-UX", line, valueof(split(line, "["),0)),
+			time = str(_time, "yyyy-MM-dd HH:mm:ss")
+| # limit 1
+| eval line_Linux = if( os == "Linux", line, null)
+| eval line_HP_UX = if( os == "HP-UX", line, null)
+| eval line_SunOS = if( os == "SunOS", line, null)
+| eval line_AIX = if( os == "AIX", line, null)
+| eval line_Window = if( os =="Window*", line, null)
+| fields - line
+
+| eval line_Linux = split(line_Linux, "\n")
+| explode line_Linux
+| rex field=line_Linux "^(?<pid>\s+\d+|\d+)\s+(?<user>\S+)\s+(?<pr>\w+)\s+(?<ni>\w+|-\w+)\s+(?<virt>[0-9.]+)(?<virt_unit>g|)\s+(?<res>[0-9.]+)(?<res_unit>g|)\s+(?<shr>\d+)\s+(?<s>\w+)\s+(?<cpu>\d+\.\d+)\s+(?<mem>\d+\.\d+)\s+(?<time+>[0-9\.:,]+)\s(?<command>.*)"
+| rex field=line_HP_UX "^*?Memory:\s+(?<mem_total>\d+)(?<mem_total_unit>\S)"
+| eval mem_total_unit = upper(nvl(mem_total_unit, "K"))
+  , mem_total_unit_size = case( mem_total_unit=="", 1, mem_total_unit=="G", 1024*1024*1024, mem_total_unit=="M", 1024*1024, mem_total_unit=="K", 1024)
+  , mem_phy_total = nvl(mem_phy_total, double(mem_total) * mem_total_unit_size)
+| eval line_HP_UX = split(line_HP_UX, "\n")
+| explode line_HP_UX
+| rex field=line_HP_UX "^[ 0-9]+\s*\S+\s*(?<pid>\d+).*[0-9]+[KMG]\s*(?<res>[0-9]+)(?<res_unit>[KMG]).*[0-9.]\s*(?<cpu_usage>[0-9]+\.[0-9]+)\s*(?<command>.*)"
+
+| eval line_SunOS = split(line_SunOS, "\n")
+| explode line_SunOS
+| rex field=line_SunOS "^(?<pid>[ 0-9]+)\s*\S+\s*\d+.*[0-9]+[KMG]\s*(?<res>[0-9]+)(?<res_unit>[KMG]).*[0-9.]\s*(?<cpu_usage>[0-9]+\.[0-9]+)%\s*(?<command>.*)"
+
+| eval line_AIX = split(line_AIX, "\n")
+| explode line_AIX
+| rex field=line_AIX "^\S+\s*(?<pid>\d+)\s*(?<cpu_usage>\d+\.\d+)\s+(?<mem_usage>\d+\.\d+)\s+\S+\s+(?<res>\S+).+\:\d+\s+(?<command>.*)"
+
+| eval line_Window = split(line_Window, "\n")
+| explode line_Window 
+| rex field=line_Window "^(?<command>.*\.\S+)\s+(?<pid>\d+)(\s+\S+\s+|\s+)\d+\s+(?<res>\S+)\s+(?<res_unit>\S)" 
+
+| eval line = nvl(nvl(nvl(nvl(line_Linux, line_HP-UX), line_SunOS), line_AIX),line_Window)
+| eval 
+	res_unit = upper(nvl(res_unit, "K")), res = double(res)
+  , res_unit_size = case( res_unit=="", 1, res_unit=="G", 1024*1024*1024, res_unit=="M", 1024*1024, res_unit=="K", 1024)
+  , mem_used = res * res_unit_size
+  , mem_usage = round( nvl(double(mem_usage), mem_used / mem_phy_total * 100), 2 )
+  , cpu_usage = round(double(cpu_usage),2), pid=trim(pid)
+
+| eval 
+	virt = double(virt),
+    res = double(res),
+    pid = str(pid), 
+    cpu = double(cpu), 
+    mem = double(mem)
+| search isnotnull(pid)
+|#  fields - _time, - _host, - os, - res_unit, - res_unit_size, - cpu_usage, - line_AIX, - line_HP_UX, - line_Linux, - line_SunOS, - line_Window,- line, - mem_phy_total, - mem_total_unit, - mem_total_unit_size, - mem_usage, - mem_used, - virt_unit 
+| fields command, cpu, mem, pid, time
+
+| # [result_fields[ 
+command || string || not null
+cpu || string || not null
+mem || string || not null
+ni || string || not null
+pid || string || not null
+pr || string || not null
+res || string || not null
+s || string || not null
+shr || string || not null
+time || string || not null
+time+ || string || not null
+user || string || not null
+virt || string || not null
+| # ]result_fields]

@@ -1,0 +1,9 @@
+파라미터 : []
+설명 : 대시보드 > 디스크 > 디스크 고갈 경보 알람 내역
+
+ table  *:xaiops_disk_alarm_logs
+| search isnotnull(guid)
+| limit 30
+| eval _time=str(_time, "yyyy-MM-dd HH:mm")
+| fields _time, guid, remote_ip, path, disk_usage
+| order _time, guid, remote_ip, path, disk_usage

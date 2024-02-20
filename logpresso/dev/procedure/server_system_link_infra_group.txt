@@ -1,0 +1,65 @@
+파라미터 : [int system_id, string inst_type]
+설명 : 설정 > 시스템 > 시스템 연동 >> 인프라그룹 main
+
+# 호스트탭 데이터 - 더미데이터 **
+| set system_id = $("system_id")
+| json "[{ 'DISPLAY_NAME': adsiap2p-1, 'SWSERVERGROUP':'ADS $#@1' },
+{ 'DISPLAY_NAME': YU, 'SWSERVERGROUP':'TEST2' },
+{ 'DISPLAY_NAME': ebfepdbos01, 'SWSERVERGROUP':'ADS2' },
+{ 'DISPLAY_NAME': ebfepapos01, 'SWSERVERGROUP':'ADS3' }, 
+{'DISPLAY_NAME': ebmciapos01, 'SWSERVERGROUP':'ADS2' },
+{ 'DISPLAY_NAME': testserver, 'SWSERVERGROUP':'ADS' },
+{ 'DISPLAY_NAME': adsfap2p-1, 'SWSERVERGROUP':'ADS' },
+{ 'DISPLAY_NAME': adssap1p-1, 'SWSERVERGROUP':'ADS' },
+{ 'DISPLAY_NAME': dr-dasxap1p, 'SWSERVERGROUP':'ADS' },
+{ 'DISPLAY_NAME': adssap2p-1, 'SWSERVERGROUP':'ADS' },
+{ 'DISPLAY_NAME': adsmdt2p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsiap3p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsiap2p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsspl1t, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsmgi1p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsiap4p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsswb1p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsswb2p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsdb1t, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adssap2p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsiap1p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adssdb2p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsfap1p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adssdb1p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsfap2p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsswb1t, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsmwk2p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsmwk1p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsmdt3p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adssap1p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adsmdt1p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': adssap3p, 'SWSERVERGROUP':'ADS(정보보호모니터링)' },
+{ 'DISPLAY_NAME': bdasap3p, 'SWSERVERGROUP':'TEST1' },
+{ 'DISPLAY_NAME': bdasap4p, 'SWSERVERGROUP':'TEST1'  },
+{ 'DISPLAY_NAME': bdnsap3p, 'SWSERVERGROUP':'TEST1'  },
+{ 'DISPLAY_NAME': bdnsap4p, 'SWSERVERGROUP':'TEST1'  },
+{ 'DISPLAY_NAME': bdesap3p, 'SWSERVERGROUP':'TEST2'  },
+{ 'DISPLAY_NAME': bdesap4p, 'SWSERVERGROUP':'TEST2'  },
+{ 'DISPLAY_NAME': bdwsap3p, 'SWSERVERGROUP':'TEST2'  },
+
+]"  
+|# Sentry Group을 호스트그룹으로 지정
+| union [ 
+confdb docs logpresso-core sentries 
+| join group [ confdb docs logpresso-core sentry_groups | rename guid as group ] 
+| rename guid as DISPLAY_NAME, name as SWSERVERGROUP
+| fields DISPLAY_NAME, SWSERVERGROUP ] 
+| # search DISPLAY_NAME == nvl($("target_id"), DISPLAY_NAME)
+| eval inst_type="os"
+| search inst_type == nvl($("inst_type"), inst_type) 
+
+
+| fields - system_id, inst_type
+| sort DISPLAY_NAME, SWSERVERGROUP
+| rename DISPLAY_NAME as target_id, SWSERVERGROUP as host_group_name
+
+| # [result_fields[
+host_group_name || string || not null	 
+target_id || string	|| not null	 	 	 	 
+| # ]result_fields]

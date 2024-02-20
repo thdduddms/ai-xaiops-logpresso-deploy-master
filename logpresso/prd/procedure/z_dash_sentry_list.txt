@@ -1,0 +1,6 @@
+파라미터 : []
+설명 : 대시보드 > 센트리 > 센트리 목록
+
+sentry 
+| lookup sentry_history guid output comment, display_yn
+| search isnull(display_yn) or display_yn != "N"

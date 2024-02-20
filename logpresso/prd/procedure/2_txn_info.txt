@@ -1,0 +1,6 @@
+파라미터 : []
+설명 : null
+
+dbquery intermax_221
+select cast(txn_id as varchar) as txn_id, cast(txn_name as varchar) as txn_name	
+from xapm_txn_name

@@ -1,0 +1,13 @@
+파라미터 : []
+설명 : 업무 그룹 <> 업무 <> 서비스 관계 (memlookup)
+
+dbquery ai_server
+select d.div_id ,e.div_name, b.biz_id as group_id, c.biz_name as group_name, a.tx_code as target_id, a.tx_code_name as pg_target_name , a.txn_id , a.txn_name, a.enable,  a.sys_id as system_id
+	from xaiops_biz_service_relation b 
+	join xaiops_service a on a.tx_seq = b.tx_seq 
+	join xaiops_biz c on b.biz_id =c.biz_id 
+	left join xaiops_division_biz_relation d on c.biz_id = d.biz_id 
+	left join xaiops_division e on d.div_id =e.div_id 
+| order div_id, div_name 
+| eval key = concat(div_name, "_", group_name, "_", target_id), inst_type = "code", group_type = "biz"
+| memlookup op=build name=z_xaiops_relation_service key=key div_id, div_name, group_type, group_id, group_name, enable, system_id, inst_type, target_id, pg_target_name, txn_id, txn_name

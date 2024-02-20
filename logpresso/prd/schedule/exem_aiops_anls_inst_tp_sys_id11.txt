@@ -1,0 +1,73 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+setq [ table duration=10m exem_aiops_anls_inst_tp
+        | stats max(_time) as last_time
+        | eval last_time = nvl(last_time, datetrunc(dateadd(now(), "min", -10), "1m"))
+        | fields last_time ]
+| set from=datetrunc(dateadd(now(), "min", -8), "1m")
+| set to=datetrunc(dateadd(now(), "min", -4), "1m")
+| table from=$("from") to=$("to") xapm_tp_svr_stat
+| eval _time = datetrunc(_time, "1m")
+| stats avg(count) as count_avg,
+    sum(count) as count_sum,
+    avg(emcount) as emcount_avg,
+    sum(emcount) as emcount_sum,
+    avg(qcount) as qcount_avg,
+    sum(qcount) as qcount_sum,
+    avg(qpcount) as qpcount_avg,
+    sum(qpcount) as qpcount_sum by _time, server_id, system_id
+| join type=left _time, server_id.system_id [ table from=$("from") to=$("to") xapm_tp_svc_stat
+    |eval _time = datetrunc(_time, "1m")
+    | stats avg(cq_count) as cq_count_avg,
+            sum(cq_count) as cq_count_sum,
+            sum(fail_count) as fail_count,
+            sum(error_count) as error_count,
+            sum(status) as status, sum(average) as elapsed_sum,
+            sum(q_average) as q_elapsed_sum,
+            sum(count) as count_sum, count by _time, server_id, system_id
+    | eval
+        status_nrdy = count - status,
+        status_rdy = count - status_nrdy,
+        elapsed_avg = elapsed_sum/count_sum,
+        q_elapsed_avg = q_elapsed_sum /count_sum
+    | fields _time, cq_count_avg, cq_count_sum, elapsed_avg, elapsed_sum, error_count, fail_count,
+            q_elapsed_avg, q_elapsed_sum, server_id, status_nrdy, status_rdy ]
+| eval
+    cq_count_avg =nvl(cq_count_avg , 0),
+    cq_count_sum =nvl(cq_count_sum , 0),
+    elapsed_avg =nvl(elapsed_avg , 0),
+    elapsed_sum =nvl(elapsed_sum , 0),
+    error_count =nvl(error_count , 0),
+    fail_count =nvl(fail_count , 0),
+    q_elapsed_avg =nvl(q_elapsed_avg , 0),
+    q_elapsed_sum =nvl(q_elapsed_sum , 0),
+    status_nrdy =nvl(status_nrdy , 0),
+    status_rdy =nvl(status_rdy , 0)
+    | eval
+    time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+    target_id=string(server_id),
+    count_avg=nvl(floor(count_avg, 4), 0),
+    emcount_avg=nvl(floor(emcount_avg, 4), 0),
+    qcount_avg=nvl(floor(qcount_avg, 4), 0),
+    qpcount_avg=nvl(floor(qpcount_avg, 4), 0),
+    count_sum=long(count_sum),
+    emcount_sum=long(emcount_sum),
+    qcount_sum=long(qcount_sum),
+    qpcount_sum =long(qpcount_sum),
+    cq_count_avg =long(cq_count_avg),
+    cq_count_sum =long(cq_count_sum),
+    elapsed_avg =floor(elapsed_avg, 4),
+    elapsed_sum =floor(elapsed_sum , 4),
+    error_count =long(error_count),
+    fail_count =long(fail_count),
+    q_elapsed_avg =floor(q_elapsed_avg, 4),
+    q_elapsed_sum =floor(q_elapsed_sum, 4),
+    status_nrdy =long(status_nrdy),
+    status_rdy =long(status_rdy),
+    _target=target_id
+ | search _time > $("last_time")
+| fields _time, _target system_id, target_id, time, count_avg,emcount_avg,qcount_avg,qpcount_avg,
+count_sum,emcount_sum,qcount_sum,qpcount_sum ,cq_count_avg ,cq_count_sum ,
+elapsed_avg ,elapsed_sum ,error_count ,fail_count ,q_elapsed_avg ,q_elapsed_sum ,status_nrdy ,status_rdy 
+| import exem_aiops_anls_inst_tp

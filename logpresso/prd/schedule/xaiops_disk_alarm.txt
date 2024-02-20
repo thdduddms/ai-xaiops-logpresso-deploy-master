@@ -1,0 +1,15 @@
+실행 주기 : * * * * *
+경보 사용 : bypass
+
+set num=90
+| table duration=1h sentry_disk_all_partitions_1m_resource
+| search target_id=="ai-*" or target_id=="dev_*" or target_id=="train*"
+| search path!="/mnt*" and path!="/iso/*" and path!="/hpe/os" and path!="/run*" and path!="/snap*"
+| sort limit=1  -_time by target_id, path
+| search disk_usage>=$("num")
+| rename target_id as guid 
+| join type=left guid [ sentry | fields guid, remote_ip ]
+| eval remote_ip = if(guid=="ai-logpresso", "10.10.34.11", remote_ip)
+| import xaiops_disk_alarm_logs
+| eval 경보_메세지 = concat( "<h3><b>", guid, "</b> (", remote_ip, ")</h3> 서버의 '<b>", path, "</b>' 파티션이 디스크 고갈 경보 기준(",$("num"), "%)을 초과하였습니다. 점검이 필요합니다.")
+| fields 경보_메세지

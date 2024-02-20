@@ -1,0 +1,22 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+set from=datetrunc( dateadd(now(), "min", -2), "1m")
+| set to = datetrunc( dateadd(now(), "min", -1), "11m" )
+| table from=$("from") to=$("to") sentry_cpu_realtime_1s_resource
+| union  [
+		table from=$("from") to=$("to") sentry_memory_realtime_1s_resource ]
+| union [
+		  table from=$("from") to=$("to") sentry_disk_realtime_1m_resource
+]
+| union [
+		  table from=$("from") to=$("to") sentry_network_realtime_1m_resource
+		| eval 
+        		_time = datetrunc(_time , "1m"), 
+                rx_bytes_delta = if(rx_bytes_delta < 0, 0, rx_bytes_delta),
+                tx_bytes_delta = if(tx_bytes_delta < 0, 0, tx_bytes_delta),
+                network = floor(rx_bytes_delta + tx_bytes_delta, 5),
+        		network = if(network < 0, 0, network) ] 
+| fields _time, _host, idle, kernel, user, pfree, ptotal, swapfree, swaptotal, free, max_partition, max_usage, total, usage, used, description, interval, rx_bytes_delta, rx_discards_delta, rx_errors_delta, rx_pkts_delta, tx_bytes_delta, tx_discards_delta, tx_errors_delta, tx_pkts_delta
+| outputcsv append=t partition=t /home/exem/jy_test/3rd_{logtime:yyyyMMdd}.csv  
+_time, _host, idle, kernel, user, pfree, ptotal, swapfree, swaptotal, free, max_partition, max_usage, total, usage, used, description, interval, rx_bytes_delta, rx_discards_delta, rx_errors_delta, rx_pkts_delta, tx_bytes_delta, tx_discards_delta, tx_errors_delta, tx_pkts_delta

@@ -1,0 +1,16 @@
+파라미터 : []
+설명 : analysis_inst_db DM 생성
+
+set system_id = 102 | set inst_type="db"
+| set from_date=datetrunc(dateadd(now(), "min", -8), "1m")
+| set to_date=datetrunc(dateadd(now(), "min", -1), "1m")
+
+| # DM import 까지 프로시저 내부에서 한다.
+| proc 33_sj_dm__anls_inst_db_oracle($("system_id"), $("from_date"), $("to_date"))
+| union [ proc 33_sj_dm__anls_inst_db_tibero($("system_id"), $("from_date"), $("to_date")) ]
+
+| # evtctx - exem_aiops_anls_inst_{target_type}
+| fields _time, system_id, _target, inst_type
+| stats count by _time, system_id, _target, inst_type                                   
+| eval module = "exem_aiops_anls_inst", inst_type = nvl(inst_type, $("inst_type")), key= concat( module, "_", $("inst_type"), "_", _target)
+| evtctxadd key=key topic="mart_result" maxrows=10 isnotnull(_target)

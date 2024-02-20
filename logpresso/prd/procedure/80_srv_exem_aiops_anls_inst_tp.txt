@@ -1,0 +1,46 @@
+파라미터 : [int system_id, datetime from_date, datetime to_date]
+설명 : 서버에서 호출하여 DM 생성
+
+ set system_id =$("system_id")
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(now(), "1m"))
+
+| table from=$("from") to=$("to") tp_dl
+| eval _time = datetrunc(_time, "1m")
+| search system_id== $("system_id")
+| stats avg(qcount_sum) as qcount_sum, avg(qcount_avg) as qcount_avg, avg(count_sum) as count_sum, 
+avg(count_avg) as count_avg, avg(elapsed_sum) as elapsed_sum, avg(elapsed_avg) as elapsed_avg, avg(error_count) as error_count,
+avg(fail_count) as fail_count, avg(qpcount_avg) as qpcount_avg, avg(cq_count_avg) as cq_count_avg, avg(cq_count_sum) as cq_count_sum,
+avg(status_rdy) as status_rdy, avg(status_nrdy) as status_nrdy, avg(q_elapsed_avg) as q_elapsed_avg, avg(q_elapsed_sum) as q_elapsed_sum,
+avg(emcount_sum) as emcount_sum, avg(emcount_avg) as emcount_avg, avg(qpcount_sum) as qpcount_sum by _time, system_id, target_id
+| eval 
+		time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+        _target = target_id,
+        count_avg=floor(count_avg,4),
+        count_sum=floor(count_sum,4),
+        cq_count_avg=floor(cq_count_avg,4),
+        cq_count_sum=floor(cq_count_sum,4),
+        elapsed_avg=floor(elapsed_avg,4),
+        elapsed_sum=floor(elapsed_sum,4),
+        emcount_avg=floor(emcount_avg,4),
+        emcount_sum=floor(emcount_sum,4),
+        error_count=floor(error_count,4),
+        fail_count=floor(fail_count,4),
+        q_elapsed_avg=floor(q_elapsed_avg,4),
+        q_elapsed_sum=floor(q_elapsed_sum,4),
+        qcount_avg=floor(qcount_avg,4),
+        qcount_sum=floor(qcount_sum,4),
+        qpcount_avg=floor(qpcount_avg,4),
+        qpcount_sum=floor(qpcount_sum,4),
+        status_nrdy=floor(status_nrdy,4),
+        status_rdy=floor(status_rdy,4)
+| # 임시. DDS에서 동적 처리 개발 완료 시점에 fields 구문 삭제 필요(23.11.1-이유린)
+| # 1220 영은 fields 구문 주석처리 // 영호님 요청
+| # fields _time, target_id, _target, qcount_sum, qcount_avg, count_sum, count_avg,elapsed_sum, elapsed_avg, error_count, fail_count, emcount_sum, emcount_avg,
+    			qpcount_sum , qpcount_avg, cq_count_avg, cq_count_sum, q_elapsed_avg, q_elapsed_sum, status_rdy, status_nrdy, system_id, time
+| # [XAIOps 대상만 필터링 하기
+| eval target_type = nvl(inst_type, "tp"),
+	key = concat(system_id, "|", target_type, "|", _target)
+| lookup lookup_xaiops_target_all  key output enable
+| search isnotnull(enable)
+| fields - key, enable  

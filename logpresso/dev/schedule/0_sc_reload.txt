@@ -1,0 +1,4 @@
+실행 주기 : 0 0 1 12 4
+경보 사용 : null
+
+proc 0_sc_switch("all", "true")

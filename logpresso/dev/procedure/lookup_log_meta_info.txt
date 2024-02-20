@@ -1,0 +1,9 @@
+파라미터 : []
+설명 : 로그이상 탐지 log meta 정보.
+
+table duration=7d dl__log
+| search isnotnull(lp_host)
+| stats count by lp_host, _host, host_name
+
+| fields _host, host_name, lp_host
+| memlookup op=build name=lookup_log_meta_info key=_host host_name, lp_host

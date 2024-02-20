@@ -1,0 +1,18 @@
+실행 주기 : 30 0 * * *
+경보 사용 : null
+
+system tables
+| fields table, data_path
+| join table [ confdb docs araqne-logstorage table | rename name as table | fields table, id ]
+| eval source=concat("/data/logpresso-backup/table/", id), dest=data_path
+| search table != "sys_*"
+| sort table
+| outputcsv overwrite=t /data/logpresso-backup/script/tablemeta.csv table, id, data_path, source, dest
+| eval base_path = "\n",
+			compress_mode = "snappy\n",
+			crypto_profile = "\n", 
+			data_structure = "columnar\n",
+			replication_mode = "\n",
+            replication_target = "\n",
+            cmd = concat( "logstorage.createTable ", table, " v3p<<EOF\n", base_path, compress_mode, crypto_profile, data_structure, replication_mode, replication_target, "EOF\n")
+| outputtxt overwrite=t /data/logpresso-backup/script/batch_create_tablemeta.sql cmd

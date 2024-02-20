@@ -1,0 +1,13 @@
+파라미터 : [int system_id, string from, string target_id]
+설명 : 모니터링>종합상황판>근본원인분석-요약정보에서 guid조회
+
+# 근본원인분석-요약정보 - guid조회하기 **
+| # proc server_anomaly_summary_info_guid(102, "202208231813", "7")
+| # [ set from = "202208231813" | set system_id = 2 | set target_id = "7" ]
+| set to = dateadd(date($("from"), "yyyyMMddHHmm"), "min", 1)
+| table from=$("from") to=$("to") exem_aiops_anls_inst_code
+| search system_id == $("system_id") and _target == $("target_id")
+| fields guid
+| # [result_fields[
+guid || string || not null
+| # ]result_fields]

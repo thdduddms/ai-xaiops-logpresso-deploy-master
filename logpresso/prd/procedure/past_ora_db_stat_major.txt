@@ -1,0 +1,15 @@
+파라미터 : [string limit, string start]
+설명 : {schema}.ora_db_stat_major 과거 데이터 입력
+
+setq [
+table to=$("limit") ora_db_stat
+| search _host == "*major"
+| stats max(_time) as last_time
+| eval last_time = nvl(last_time, date($("start"),"yyyyMMddHHmm"))
+| eval last_time = string(last_time, "yyyy-MM-dd HH:mm:ss")
+| fields last_time ]
+| dbquery maxgauge_222
+select t1.avg_value, t1.db_id, t1.diff_value, t1.max_value, t1.sigma_value, t1.stat_id, t1.stat_version, t2.stat_name, t1.time, 2 as system_id, cast(t1.db_id as varchar) as _target from fepdb01.ora_db_stat_major t1 left outer join ora_stat_name t2 on t1.stat_id = t2.stat_id and t1.db_id = t2.db_id where time > :last_time and time < cast(:last_time as timestamp) + interval '240 min' order by t1.time
+ | eval _time = date(time, "yyyy-MM-dd HH:mm:ss"), _host = "2.fepdb01.ora_db_stat_major"
+ | search _time < date($("limit"), "yyyyMMddHHmm")
+ | import ora_db_stat

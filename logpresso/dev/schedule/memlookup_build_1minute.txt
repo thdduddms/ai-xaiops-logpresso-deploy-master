@@ -1,0 +1,6 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+proc lookup_tier_was_instance()
+| proc lookup_total_service_list() | # XAIops 서비스 전체 목록
+| proc lookup_xaiops_target_all()

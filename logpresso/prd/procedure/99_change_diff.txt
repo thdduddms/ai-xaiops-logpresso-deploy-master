@@ -1,0 +1,20 @@
+파라미터 : [string target_name]
+설명 : 관리자용) 변경사항 비교를 위한 내용 조회 / 작성 중 (현재ver.프로시저,예약쿼리,스트림쿼리)
+
+set from = $("from", ago("120d"))
+| set to = now()
+| table from=$("from") to=$("to") sys_audit_logs
+| search user == "root" and isnull(error) and (contains(lower(method), "procedure") or contains(lower(method), "scheduled") or contains(lower(method), "stream"))
+| eval name = nvl( valueof(params, "title"), nvl( valueof(params, "name"), strjoin(", ", valueof(params, "names")) ) ),
+		method = replace(method, "com.logpresso.core.msgbus.", ""), 
+        method = replace(method, "com.logpresso.query.msgbus.", ""),
+        type = substr(method, 0, indexof(method, ".")), 
+        action = substr(method, indexof(method, ".")+1), 
+        _time = str(_time, "yyyy-MM-dd HH:mm")
+| search name == $("target_name")
+| parsemap overlay=t field=params
+| eval query_string = nvl(query_string, query), 
+		parameters = strjoin("\n", parameters), 
+        description = valueof(params, "description")
+| fields - req, rep
+| order name, _time, user, remote_ip, method,  query_string, parameters, description, params

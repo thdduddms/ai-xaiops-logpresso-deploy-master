@@ -1,0 +1,25 @@
+파라미터 : [string parameter]
+설명 : 센트리 수집기 일괄 생성 프로시저
+
+ sentry 
+ | fields guid, os
+| join type=inner os [
+	lookuptable sentry_logger_factory
+    | eval os = split(os, ",") | explode os  ]
+| fields guid, os, factory_name, interval, name, table_name, sentry_logger_type
+| join type=left sentry_logger_type, os [
+		lookuptable sentry_logger_command
+         | eval os = split(os, ",") 
+         | explode os
+]
+| eval parameters = if(isnull($("parameter")), false, $("parameter")),
+	host_tag = guid, 
+    configs=if(isnotnull(command), dict("command", command),  dict("command", factory_name)),
+    interval = int(interval)
+| search contains(guid, $("parameter", "")) 
+			or contains(lower(os), lower($("parameter", ""))) 
+            or contains(sentry_logger_type, $("parameter", ""))
+| fields - parameters, command
+| sentry-logger-create
+| sentry-logger-connect
+| sentry-logger-start

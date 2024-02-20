@@ -1,0 +1,168 @@
+파라미터 : [int system_id]
+설명 : 관리자용 ] 서비스 예약쿼리 '전체 문구' 생성용 쿼리문
+
+set system_id = 102
+|memlookup name=lookup_tier_was_instance
+| search system_id == $("system_id")
+| stats count by e2e_code
+| eval rename_header = "| rename ", 
+		q = concat( "sum:", e2e_code, " as elapse", e2e_code, "_avg"),
+        q2 = concat( "error:", e2e_code, " as error", e2e_code, "_count"), 
+        q3 = concat( "exec_count:", e2e_code, " as exec", e2e_code, "_count"),
+        q4 = concat( "max_elapse:", e2e_code, " as max", e2e_code, "_elapse")
+| stats values(q) as q, values(q2) as q2, values(q3) as q3, values(rename_header) as header, values(q4) as q4
+| eval q = strjoin( ", ", q), 
+		q2 = strjoin( ", ", q2), 
+        q3 = strjoin( ", ", q3), 
+        q4= strjoin( ", ", q4), 
+        header = strjoin( ", ", header)
+| eval query = concat(header, q, ",\n", q2, ",\n",  q3, ",\n", q4) | fields query | eval seq = 1
+| union [
+memlookup name=lookup_tier_was_instance
+| search system_id == $("system_id")
+| stats count by e2e_code
+| eval header = "error_count = ",
+		q = concat( "nvl(error", e2e_code, "_count, 0)"),
+        header2 = "elapse_avg = ", 
+        q2 = concat( "nvl(elapse", e2e_code, "_avg, 0)"),
+        header3 = "exec_count = ", 
+        q3 = concat( "nvl(exec", e2e_code, "_count, 0)"),
+        header4 = ("elapse_max = max("), 
+        q4 = concat( "nvl(max", e2e_code, "_elapse, 0)"), t4 = (")")
+| stats values(q) as q, values(header) as h, values(q2) as q2, values(header2) as h2, values(q3) as q3, values(header3) as h3, values(q4) as q4, values(header4) as h4, values(t4) as t4
+| eval h= strjoin( " ", h), 
+		q = strjoin( " + ", q), 
+        h2= strjoin( " ", h2), 
+        q2 = strjoin( " + ", q2), 
+        h3= strjoin( " ", h3), 
+        q3 = strjoin( " + ", q3), 
+        h4= strjoin( " ", h4), 
+        q4 = strjoin( " , ", q4), 
+        t4 = strjoin("", t4)
+| eval query = concat(h, q), query2 = concat(h2, q2), query3 = concat(h3, q3), query4 = concat(h4, q4, t4)
+| fields query, query2, query3, query4
+| eval query = concat(query, ",\n", query2, ",\n", query3, ",\n", query4)
+| fields query | eval seq = 2 ]
+
+| union [
+memlookup name=lookup_tier_was_instance
+| search system_id == $("system_id")
+| stats count by e2e_code
+| eval q = concat( "avg(elapse", e2e_code, "_avg) as elapse", e2e_code, "_avg"), 
+		q2 = concat( "max(elapse", e2e_code, "_avg) as elapse", e2e_code, "_max"),
+        q3 = concat( "sum(error", e2e_code, "_count) as error", e2e_code, "_count")
+| stats values(q) as q, values(q2) as q2, values(q3) as q3
+| eval q= strjoin( ", ", q), q2= strjoin( ", ", q2), q3= strjoin( ", ", q3)
+| eval query = concat(q, ",\n", q2, ",\n", q3) | fields query | eval seq = array(3,5) | explode seq ]
+| union [ 
+memlookup name=lookup_tier_was_instance
+| search system_id == $("system_id")
+| stats count by e2e_code
+| eval q = concat( "error", e2e_code, "_count = nvl(error", e2e_code, "_count, 0)"),
+		q2 = concat( "elapse", e2e_code, "_avg = nvl(floor(elapse", e2e_code, "_avg, 4), 0)"),
+		q3 = concat( "elapse", e2e_code, "_max = nvl(floor(elapse", e2e_code, "_max, 4), 0)"),
+ 		q4 = concat("error", e2e_code ,"_count"), h4 = "error_count = "
+| stats values(q) as q, values(q2) as q2, values(q3) as q3, values(q4) as q4, values(h4) as h4
+| eval q = strjoin( ", ", q), q2 = strjoin( ", ", q2), q3 = strjoin( ", ", q3), q4 = strjoin( " + ", q4), h4 = strjoin( "", h4),
+ query = concat(q, ",\n", q2, ",\n", q3, ",\n", h4,q4) | fields query | eval seq = 4 ]
+| union [
+memlookup name=lookup_tier_was_instance
+| search system_id == $("system_id")
+| stats count by e2e_code
+| eval 
+		q = concat( "error", e2e_code, "_count"), h = "error_count = nvl(", t = ", 0)",
+		q2 = concat( "elapse", e2e_code, "_avg = floor(elapse", e2e_code, "_avg, 4)")
+| stats values(q) as q, values(q2) as q2 , values(h) as h, values(t) as t
+| eval q= strjoin( " + ", q), q2 = strjoin( ", ", q2), h= strjoin( " ", h), t = strjoin( " ", t)
+| eval query = concat(h, q, t, ",\n", q2) | fields query | eval seq = 6 ]
+| union [ 
+memlookup name=lookup_tier_was_instance
+| search system_id == $("system_id")
+| stats count by e2e_code
+| eval q = concat( "elapse", e2e_code, "_avg, elapse", e2e_code, "_max")
+| stats values(q) as q
+| eval query = strjoin( ", ", q) | fields query | eval seq = 7 ]
+| sort seq
+| pivot values(query) as query for seq
+| eval query = "setq [table duration=10m exem_aiops_anls_inst_code\n
+	 | search  system_id == 102\n
+      | stats max(_time) as last_time\n
+      | eval last_time = nvl(last_time, datetrunc(dateadd(now(), \"min\", -9), \"1m\"))\n
+      | fields last_time ]\n
+| set from=datetrunc(dateadd(now(), \"min\", -8), \"1m\")\n
+| set to=datetrunc(dateadd(now(), \"min\", -1), \"1m\")\n
+| table from=$(\"from\") to=$(\"to\") xapm_txn_detail\n
+| eval _time = datetrunc(_time, \"1m\")\n
+| search isnotnull(guid) and isnotnull(tx_code) |# and _time > $(\"last_time\") \n
+| eval key = concat(system_id,\"-\",string(was_id))\n
+| lookup lookup_tier_was_instance key output e2e_code\n
+| search isnotnull(e2e_code)\n
+| eval elapse = txn_elapse - remote_elapse, _target= if(contains(tx_code, \"/\"), tohex( hash(\"md5\", binary(tx_code))), string(tx_code))\n
+| fields elapse, exception, _time, system_id, guid, tx_code, tx_code_name, e2e_code, txn_elapse, txn_id, txn_name, was_id, _target\n
+| pivot max(txn_elapse) as max_elapse, count as exec_count, sum(elapse) as sum, sum(exception) as error \n
+      rows _time, system_id, guid, tx_code, tx_code_name,txn_id, txn_name,was_id, _target\n
+      cols e2e_code\n
+|#$1
+| eval\n
+        |#$2,\n
+        txn_id_info = concat(txn_id, \"$$\", txn_name)\n
+| join type=leftonly guid [ table from=$(\"from\") to=$(\"to\") exem_aiops_anls_inst_code| stats count by guid | fields guid ]\n
+| stats last(guid) as guid, sum(exec_count) as exec_count, count as node_count,\n
+    |#$3,\n
+    avg(elapse_avg) as elapse_avg, max(elapse_max) as elapse_max, sum(elapse_avg) as total_elapse_time, \n
+    first(txn_id_info) as txn_id_info\n
+    by _time, system_id, tx_code, tx_code_name, was_id, _target\n
+| eval\n
+	|#$4,\n
+    elapse_avg = nvl(floor(elapse_avg, 4), 0),\n
+    total_elapse_time = int(nvl(total_elapse_time, 0)),\n
+    tx_code = string(tx_code), txn_name = nvl(replace(txn_name, \",\", \"-\"), concat(\"nvl_\",txn_id)), tx_code_name = nvl(replace(tx_code_name, \",\", \"-\"), concat(\"nvl_\", tx_code)),\n
+    txn_id = substr(txn_id_info, 0, indexof(txn_id_info, \"$$\")), txn_name = substr(txn_id_info, indexof(txn_id_info, \"$$\")+2),\n
+    time = string(_time, \"yyyy-MM-dd HH:mm:ss\")\n
+|# import exem_aiops_anls_sys_e2e_by_was \n
+| stats last(guid) as guid, sum(exec_count) as exec_count, sum(node_count) as node_count,\n
+    |#$5,\n
+    avg(elapse_avg) as elapse_avg, max(elapse_max) as elapse_max, sum(total_elapse_time) as total_elapse_time, \n
+    first(txn_id_info) as txn_id_info\n
+    by _time, time, system_id, _target, tx_code, tx_code_name, _target\n
+| eval \n
+    |#$6,\n
+    elapse_avg=floor(elapse_avg,4),\n
+    txn_id = substr(txn_id_info, 0, indexof(txn_id_info, \"$$\")), txn_name = substr(txn_id_info, indexof(txn_id_info, \"$$\")+2)\n
+| fields _time, time, system_id, _target, guid, tx_code, tx_code_name, txn_id, txn_name, \n
+			exec_count, node_count, elapse_avg, elapse_max, total_elapse_time, error_count,\n
+			|#$7\n
+ | # 2022.11.18 anomaly 테스트용- 김민지\n
+ | eval elapse01_avg = if(_target==\"7\", 50, elapse01_avg)\n
+| # XAIOps 대상만 필터링 하기\n
+| eval target_type = nvl(inst_type, \"service\"),\n
+	key = concat(system_id, \"|\", target_type, \"|\", _target)\n
+| lookup lookup_xaiops_target_all  key output enable\n
+| search isnotnull(enable)\n
+| fields - key, enable\n
+|# import exem_aiops_anls_inst_code\n
+
+|# [ fields _time, system_id, _target\n
+| eval lp_time = datetrunc(now(), \"1m\"),\n
+        _target = string(_target)\n
+| stats count, first(lp_time) as lp_time by _time, system_id, _target\n
+| eval \n
+		mart = \"exem_aiops_anls_inst_code\", \n
+        lp_time = datetrunc(now(), \"1m\"),\n
+        inst_type = \"code\",\n
+        module = \"exem_aiops_fcst\",\n
+|# import exem_mart_result\n
+\n
+| eval _target = \"all\"\n
+| stats sum(count) as count, first(lp_time) as lp_time, first(_time) as _time by system_id, _target\n
+| eval mart = \"exem_aiops_anls_inst_code\", module = \"exem_aiops_anls_service\", inst_type = \"service\"\n
+|# import exem_mart_result\n" 
+
+| eval query = replace( query, "|#$1", strjoin("", field(1))),
+query = replace( query, "|#$2", strjoin("", field(2))),
+query = replace( query, "|#$3", strjoin("", field(3))),
+query = replace( query, "|#$4", strjoin("", field(4))),
+query = replace( query, "|#$5", strjoin("", field(5))),
+query = replace( query, "|#$6", strjoin("", field(6))),
+query = replace( query, "|#$7", strjoin("", field(7)))
+| fields query

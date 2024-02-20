@@ -1,0 +1,58 @@
+파라미터 : []
+설명 : 설정 > 시스템 > 시스템 연동 >>인스턴스&그룹 sub (APM-Intermax)
+
+# target_id : 본사는 repo_ip 안붙이고, 사이트는 붙여서 사용
+
+
+| # 'JAVA' : was  'WSM' : web,  'TP', 'TUX : TP
+| dbquery intermax_intermax
+			select t1.*, COALESCE((select true from xapm_service_group xsg where t1.target_id = xsg.server_id), false) as enable
+		from (
+        	select modified_time, server_id as target_id, a.type, COALESCE(b.host_name, a.host_name) as host_name, inst_name
+  					from xapm_agent_info as a
+					inner join ( select was_id as target_id, 'WSM' as type, host_name, was_name as inst_name  from xapm_was_info
+  					union all select ws_id as target_id, 'WSM' as type, host_name, ws_name as inst_name from xapm_ws_info) 
+					b on a.server_id=b.target_id
+			where a.type in ('JAVA', 'WSM', 'server_id', 'TUX')
+		) t1 where inst_name is not null
+| eval target_id = str(target_id)
+	| join type=left target_id [ 
+		dbquery intermax_intermax 
+			select
+				group_type,
+				group_name as inst_group_name,
+				group_id as target_id
+			from
+				xapm_business_group_info
+			where type = 'GROUP'
+		| fields group_type, inst_group_name, target_id
+     ]
+
+ | sort limit=1 -modified_time by repo_ip, type, target_id, inst_group_name
+
+| # { 본사용 임시 대상 
+| json "{\"enable\":true,\"inst_type\":\"tp\",\"inst_product_type\":null,\"inst_group_name\":null,\"target_id\":\"tp01\",\"inst_name\":\"tp01\",\"inst_product_version\":null,\"host_name\":\"intermax\",\"desc\":\"테스트용 대상\"}"
+| json "{\"enable\":true,\"inst_type\":\"tp\",\"inst_product_type\":null,\"inst_group_name\":null,\"target_id\":\"tp02\",\"inst_name\":\"tp02\",\"inst_product_version\":null,\"host_name\":\"intermax\",\"desc\":\"테스트용 대상\"}"
+| json "{\"enable\":true,\"inst_type\":\"web\",\"inst_product_type\":null,\"inst_group_name\":null,\"target_id\":\"web01\",\"inst_name\":\"web01\",\"inst_product_version\":null,\"host_name\":\"intermax\",\"desc\":\"테스트용 대상\"}"
+| json "{\"enable\":true,\"inst_type\":\"web\",\"inst_product_type\":null,\"inst_group_name\":null,\"target_id\":\"web02\",\"inst_name\":\"web02\",\"inst_product_version\":null,\"host_name\":\"intermax\",\"desc\":\"테스트용 대상\"}"
+ | # }
+
+ | eval
+ 			host_name = if(len(host_name)==0, null, host_name),
+			inst_type = case( in(type, "JAVA"), "was", in(type, "TP", "TUX"), "tp", in(type, "WSM"), "web", inst_type),
+            inst_solution ="intermax",
+| fields inst_type, target_id, host_name, inst_name, inst_group_name, desc, enable, inst_solution
+
+
+| # enable : 다른 APM, DPM제품인 경우, 관련 정보를 찾을수 없다면 무조건 true로 출력하는 방향으로 접근할 예정입니다.
+
+| # [result_fields[
+inst_type || string	|| not null 
+target_id || string	|| not null	 
+host_name || string	|| not null	
+inst_name || string	|| null	 
+inst_group_name || string || null		 	 
+desc ||	string	|| null
+enable || bool	|| not null	 	
+inst_solution || string	|| not null	 	 	  	 	 
+| # ]result_fields]

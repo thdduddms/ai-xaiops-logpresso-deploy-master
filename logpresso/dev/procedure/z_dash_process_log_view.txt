@@ -1,0 +1,5 @@
+파라미터 : [string entry]
+설명 : 대시보드 > 프로세스 로그 > 원본로그보기 목록
+
+lookuptable lu_xaiops_target
+| search entry == upper($("entry"))

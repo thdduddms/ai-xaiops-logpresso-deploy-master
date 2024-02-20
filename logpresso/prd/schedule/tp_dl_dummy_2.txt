@@ -1,0 +1,23 @@
+실행 주기 : 2 * * * *
+경보 사용 : null
+
+set from=datetrunc(dateadd(now(), "min", -3), "1m")
+| set to=datetrunc(dateadd(now(), "min", -1), "1m")
+| table from=$("from") to=$("to") xapm_jvm_stat_summary
+| eval _time = datetrunc(now(), "1m"), qcount_sum = rand(100), qcount_avg = rand(100), count_sum = rand(100), count_avg = rand(60), elapsed_sum  =rand(100),
+	elapsed_avg = rand(60), error_count = rand(40), emcount_sum = rand(100), emcount_avg = rand(60), qpcount_sum = rand(100), qpcount_avg = rand(60),
+    cq_count_avg = rand(60), cq_count_sum = rand(100), q_elapsed_avg = rand(60), q_elapsed_sum = rand(100), status_rdy = rand(100), status_nrdy = rand(100),
+    fail_count = rand(100)
+    | fields _time, target_id, qcount_sum, qcount_avg, count_sum, count_avg,elapsed_sum, elapsed_avg, error_count, fail_count, emcount_sum, emcount_avg,
+    			qpcount_sum , qpcount_avg, cq_count_avg, cq_count_sum, q_elapsed_avg, q_elapsed_sum, status_rdy, status_nrdy, system_id, time
+| union [
+table from=$("from") to=$("to") xapm_jvm_stat_summary
+| eval _time = datetrunc(now(), "1m"), qcount_sum = rand(100), qcount_avg = rand(100), count_sum = rand(100), count_avg = rand(60), elapsed_sum  =rand(100),
+	elapsed_avg = rand(60), error_count = rand(40), emcount_sum = rand(100), emcount_avg = rand(60), qpcount_sum = rand(100), qpcount_avg = rand(60),
+    cq_count_avg = rand(60), cq_count_sum = rand(100), q_elapsed_avg = rand(60), q_elapsed_sum = rand(100), status_rdy = rand(100), status_nrdy = rand(100),
+    fail_count = rand(100)
+    | fields _time, target_id, qcount_sum, qcount_avg, count_sum, count_avg,elapsed_sum, elapsed_avg, error_count, fail_count, emcount_sum, emcount_avg,
+    			qpcount_sum , qpcount_avg, cq_count_avg, cq_count_sum, q_elapsed_avg, q_elapsed_sum, status_rdy, status_nrdy, system_id, time
+]
+| eval target_id = "tp01", system_id = 2,  time = string(_time, "yyyy-MM-dd HH:mm:ss")
+| import tp_dl

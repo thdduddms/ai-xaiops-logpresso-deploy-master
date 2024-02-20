@@ -1,0 +1,7 @@
+파라미터 : []
+설명 : 테이블별 디스크 사용량, 첫 데이터 일자, 마지막 데이터 일자, 보관 일자, 보관 주기, 이중화 설정 확인
+
+system tables verbose=t
+| eval day = datediff(max_day, min_day, "day")
+| sort -disk_usage
+| order table, disk_usage, min_day, max_day, day, retention_policy, replica_configs

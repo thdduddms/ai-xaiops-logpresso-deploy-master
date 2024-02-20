@@ -1,0 +1,40 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+set inst_product_type = "postgresql"
+| set from=nvl($("from_date") , datetrunc(dateadd(now(), "min", -8), "1m"))
+| set to=nvl($("to_date"), datetrunc(now(), "1m"))
+| table from=$("from") to=$("to")  dbstat_ys
+| eval 
+	_time = datetrunc(_time, "1m")
+| stats 
+	avg(numbackends) as numbackends,
+	avg(max_connections) as max_connections,
+	avg(locks_waiting) as locks_waiting,
+	avg(long_locks_waiting) as long_locks_waiting,
+	avg(active_backend) as active_backend,
+	avg(long_active_backend) as long_active_backend,
+	avg(xact_commit) as xact_commit,
+	avg(xact_rollback) as xact_rollback,
+	avg(blks_read) as blks_read,
+	avg(blks_hit) as blks_hit,
+	avg(tup_returned) as tup_returned,
+	avg(tup_fetched) as tup_fetched,
+	avg(tup_inserted) as tup_inserted,
+	avg(tup_updated) as tup_updated,
+	avg(tup_deleted) as tup_deleted,
+	avg(conflicts) as conflicts,
+	avg(temp_files) as temp_files,
+	avg(temp_bytes) as temp_bytes,
+	avg(deadlocks) as deadlocks,
+	avg(blk_read_time) as blk_read_time,
+	avg(blk_write_time) as blk_write_time
+    by instance_id, datid, _time, _host
+| eval
+    time = string(_time, "yyyy-MM-dd HH:mm:ss"),
+    instance_id = string(instance_id),
+    solution="maxgauge",
+    inst_product_type=upper($("inst_product_type"))
+| rename instance_id as _target
+| sort _time
+| import ys_mfc_dm

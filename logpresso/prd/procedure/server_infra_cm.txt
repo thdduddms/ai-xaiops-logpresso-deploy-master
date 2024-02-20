@@ -1,0 +1,21 @@
+파라미터 : [int system_id, string host_names, string from, string to]
+설명 : 모니터링 > 인프라 모니터링 > cpu, mem 사용률
+
+# target_ids에 해당하는 cpu, mem 사용률 리턴 **
+| table from=$("from") to=$("to") exem_aiops_anls_inst_os
+| rename host_name as target_id
+| fields target_id, system_id, cpu_usage, memory_usage, _time
+| join target_id [
+		json "{}" 
+        | eval target_id = split($("host_names"), ",") 
+        | explode target_id 
+        ]
+| fields target_id, system_id, cpu_usage, memory_usage, _time
+
+| # [result_fields[ 
+_time || date || not null
+cpu_usage || double || not null
+memory_usage || double || not null
+system_id || int || not null
+target_id || string || not null
+| # ]result_fields]

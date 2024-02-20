@@ -1,0 +1,35 @@
+실행 주기 : * * * * *
+경보 사용 : null
+
+set partition_key = concat( str(now(), "yyMMdd"), "014")
+| dbquery maxgauge 
+select a2.partition_key, a2.db_id, a2.sid, a2.serial, a2.sql_id, a2.sql_uid, a2.time, a2.lock_holder_inst_id, a2.lock_holder_sid, a2.module, a2.event_id, seq, sql_text
+  from fepdb01.apm_sql_list a1, fepdb01.ora_session_stat a2
+ where 1=1
+    and a1.partition_key = a2.partition_key and a1.db_id = a2.db_id and a1.sql_uid = a2.sql_uid
+    and a2.partition_key = :partition_key and a2.db_id = 14 and a2.time between now() - interval '2 min' and now() - interval '1 min' and a2.lock_holder_sid is not null
+ order by a1.sql_uid, a1.seq
+| # 240103 영은 // 개발서버 재부팅 후 오류나서 주석. 미사용 서버임
+| # union [
+	set partition_key = concat( str(now(), "yyMMdd"), "002")
+	| dbquery maxgauge 
+    select a2.partition_key, a2.db_id, a2.sid, a2.serial, a2.sql_id, a2.sql_uid, a2.time, a2.lock_holder_inst_id, a2.lock_holder_sid, a2.module, a2.event_id, seq, sql_text
+      from mcidb1.apm_sql_list a1, mcidb1.ora_session_stat a2
+     where 1=1
+        and a1.partition_key = a2.partition_key and a1.db_id = a2.db_id and a1.sql_uid = a2.sql_uid
+        and a2.partition_key = :partition_key and a2.db_id = 2 and a2.time between now() - interval '2 min' and now() - interval '1 min' and a2.lock_holder_sid is not null
+        order by a1.sql_uid, a1.seq
+    ]
+    
+| union [
+	set partition_key = concat( str(now(), "yyMMdd"), "003")
+	| dbquery maxgauge 
+    select a2.partition_key, a2.db_id, a2.sid, a2.serial, a2.sql_id, a2.sql_uid, a2.time, a2.lock_holder_inst_id, a2.lock_holder_sid, a2.module, a2.event_id, seq, sql_text
+      from mcidb2.apm_sql_list a1, mcidb2.ora_session_stat a2
+     where 1=1
+        and a1.partition_key = a2.partition_key and a1.db_id = a2.db_id and a1.sql_uid = a2.sql_uid
+        and a2.partition_key = :partition_key and a2.db_id = 3 and a2.time between now() - interval '2 min' and now() - interval '1 min' and a2.lock_holder_sid is not null
+        order by a1.sql_uid, a1.seq
+    ]
+
+| import anomaly_summary_db_session_lock

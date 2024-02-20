@@ -1,0 +1,44 @@
+파라미터 : [string from]
+설명 : 맥스게이지 수집상태 점검 프로시저
+
+set from= $("from")
+| set to= dateadd(date($("from"), "yyyyMMddHHmm"),"min",1)
+| set from_date = date($("from"), "yyyyMMddHHmm")
+ 
+| table order=asc from=$("from_date") to=$("to") maxgauge*
+| eval  len=len(_table), _table = substr(_table , 15, len), target=_host
+| pivot count by _time, _table, target
+| eval field="logpresso"
+ 
+| union [
+dbquery maxgauge_222
+select * from fepdb01.ora_db_stat_major
+where time >=:from_date and time < :to
+| stats count by time
+| eval _time = time, _table ="ora_db_stat_major", field="maxgauge", target="fepdb01"]
+ 
+| union [
+ dbquery maxgauge_222
+select * from fepdb01.ora_db_stat_minor
+where time >=:from_date and time < :to
+| stats count by time
+| eval _time = time, _table ="ora_db_stat_minor", field="maxgauge", target="fepdb01" ]
+
+| union [
+dbquery maxgauge_222
+select * from mcidb2.ora_db_stat_major
+where time >=:from_date and time < :to
+| stats count by time
+| eval _time = time, _table ="ora_db_stat_major", field="maxgauge", target="mcidb2"]
+ 
+| union [
+ dbquery maxgauge_222
+select * from mcidb2.ora_db_stat_minor
+where time >=:from_date and time < :to
+| stats count by time
+| eval _time = time, _table ="ora_db_stat_minor", field="maxgauge", target="mcidb2" ]
+
+
+| sort _table, target
+| eval _time = str(_time, "yyyy-MM-dd HH:mm:ss")
+| fields _time, field, _table, target, count 
